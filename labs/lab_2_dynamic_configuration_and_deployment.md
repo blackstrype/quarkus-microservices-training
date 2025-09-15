@@ -12,7 +12,7 @@ As a key component of the Smart City Transit Network, your `train-line-service` 
 
 1.  **Debugging and Logging in Dev Mode**
 
-    Introduce the `Logger`. Open `StatusResource.java` and inject a logger.
+    Introduce the `Logger`. Open `StatusResource.java` and inject a logger. Add a log statement.
 
     ```java
     // src/main/java/com/example/StatusResource.java
@@ -32,24 +32,38 @@ As a key component of the Smart City Transit Network, your `train-line-service` 
         @GET
         @Produces(MediaType.TEXT_PLAIN)
         public String status() {
-            logger.info("Checking the status of the train line service...");
+            logger.debug("Checking the status of the train line service...");
             return "Operational";
         }
     }
     ```
 
-    **Run with the Debugger Attached**: Start the application in dev mode and attach your debugger to port `5005`.
+    Run the code with `quarkus dev`.
+
+    **Run with the Debugger Attached**: Attach your debugger to port `5005`.
 
     ```bash
     ./mvnw quarkus:dev
     ```
 
-    Set a breakpoint on the `return "Operational";` line in `status()` and refresh the browser at `http://localhost:8080/status`. Observe the debugger stopping at the breakpoint.
+    Set a breakpoint on the logger line in `status()` and re-run a curl command. Observe the debugger stopping at the breakpoint.
 
-    **Demonstrate Live Reload**: While the debugger is attached, modify the log message and observe the application recompile instantly without losing the debugger connection.
-    - Change the log message to `logger.info("Status check successful.");`.
+    **Demonstrate Live Reload**: While the debugger is still attached, add a new logging line
+    
+    ```java
+    @GET
+    @Produces(MediaType.TEXT_PLAIN)
+    public String status() {
+        logger.debug("Checking the status of the train line service...");
+        logger.info("Status check successful.");
+        return "Operational";
+    }
+    ```
+
+    - Observe that the IDE running the debugger detects a code change (Accept the code change).
+    - Set a breakpoint on the new logging line and run a new `/status` endpoint call.
     - Change the return statement to `return "Running smoothly";`.
-    - Refresh the browser and observe the new behavior.
+    - Re-run a `/status` call and observe the new behavior.
 
 2.  **Dynamic Configuration**
 
@@ -85,7 +99,10 @@ As a key component of the Smart City Transit Network, your `train-line-service` 
     train-line-name=Express-Line-A
     ```
 
-    Observe the changes. Refresh the browser at `http://localhost:8080/status` and observe the new log message with the `train-line-name` included.
+    Observe the changes. Use `curl` to access the endpoint and observe the new log message with the `train-line-name` included.
+    ```bash
+    curl http://localhost:8080/status
+    ```
 
     **Demonstrate dynamic overrides**: You can override this value at runtime with a system property.
 
@@ -95,33 +112,57 @@ As a key component of the Smart City Transit Network, your `train-line-service` 
 
 3.  **Containerize the Application**
 
-    Add the container image extension. Open `pom.xml` and add the `quarkus-container-image-podman` extension.
+    Add the container image extension. Open `pom.xml` and add the `quarkus-container-image-podman` and the `quarkus-container-image-jib` extension.
 
     ```xml
     <dependency>
         <groupId>io.quarkus</groupId>
+        <artifactId>quarkus-container-image-jib</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>io.quarkus</groupId>
         <artifactId>quarkus-container-image-podman</artifactId>
-        <scope>provided</scope>
     </dependency>
     ```
 
-    Build the container image. Run the following command to build a native executable and a corresponding container image.
+    Add some config to automatically tag and name the image.
 
-    ```bash
-    ./mvnw package -Pnative -Dquarkus.container-image.build=true
+    ```properties
+    quarkus.container-image.group=localhost/smessner
+    quarkus.container-image.name=train-line-service
+    quarkus.container-image.tag=latest
     ```
 
-    Run the image. Run the container using Podman.
+    Note: If not done in your global mvn config, you may also need to expicitly set podman as the container runtime for this app
 
-    ```bash
-    podman run -it --rm -p 8080:8080 example/train-line-service:1.0.0-SNAPSHOT-runner
+    ```properties
+    quarkus.container-image.runtime=podman
     ```
 
-    Override the configuration in the container. Stop the container and restart it, this time overriding the `train-line-name` with an environment variable.
+    Build the container image using jib. Run the following command to build a native executable within a container and prepare the container image that will run the application.
 
     ```bash
-    podman run -it --rm -p 8080:8080 -e TRAIN_LINE_NAME=Express-Line-B example/train-line-service:1.0.0-SNAPSHOT-runner
+    ./mvnw package -Pnative -Dquarkus.native.container-build=true -Dquarkus.container-image.build=true
     ```
+
+    Run the container using Podman.
+
+    ```bash
+    podman run -it -p 8080:8080 localhost/smessner/train-line-service:latest
+    ```
+    
+    Add a production profile to `application.properties`:
+    ```properties
+    %prod.train-line-name=Production-Line-C
+    ```
+
+    Override the configuration in the container. Stop the container and restart it, this time overriding the `train-line-name` with an environment variable and running in production mode.
+
+    ```bash
+    podman run -it --rm -p 8080:8080 -e QUARKUS_PROFILE=prod -e TRAIN_LINE_NAME=Express-Line-B localhost/smessner/train-line-service:latest
+    ```
+
+    Test a few curl commands on the /status endpoint to see how the train-line-name changes in between prod and dev profiles.
 
 4.  **Save your work**
 
@@ -138,3 +179,8 @@ As a key component of the Smart City Transit Network, your `train-line-service` 
 - [ ] Can you override the `train-line-name` with an environment variable?
 - [ ] Can you build and run the container image?
 - [ ] Have you committed your work to Git?
+
+## Discussion Points
+
+ - [Runtime Performance Comparisons](https://quarkus.io/blog/runtime-performance/)
+ - [Config Reference](https://quarkus.io/guides/config-reference)

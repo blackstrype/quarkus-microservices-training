@@ -1,6 +1,6 @@
 ---
 marp: true
-theme: neobeam.css
+theme: neobeam
 style: |
   section::before {
     content: '';

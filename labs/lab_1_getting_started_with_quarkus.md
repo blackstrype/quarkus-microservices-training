@@ -15,7 +15,7 @@ Each participant will create a microservice representing a single train line wit
     Use the Quarkus CLI to create a new project. The `quarkus:create` command will generate a full-featured project with a REST endpoint, a test, and a Dockerfile.
 
     ```bash
-    quarkus create app com.example:train-line-service --extensions=resteasy-reactive,resteasy-reactive-jackson
+    quarkus create app com.example:train-line-service --extensions=rest,rest-jackson
     ```
 
     Navigate to the new `train-line-service` directory.
@@ -29,14 +29,20 @@ Each participant will create a microservice representing a single train line wit
     Start the application in development mode.
 
     ```bash
-    ./mvnw quarkus:dev
+    quarkus dev
     ```
-
-    Observe the live reload feature by changing the return `"Hello from RESTEasy Reactive";` in `src/main/java/com/example/GreetingResource.java` to `return "Hello, train line!";`. The change will be reflected automatically in the application.
-
-    Access the endpoint in your browser:
-    [http://localhost:8080/hello](http://localhost:8080/hello)
-
+    
+    Access the endpoint using `curl`:
+    ```bash
+    curl http://localhost:8080/hello
+    ```
+    
+    Observe the live reload feature by changing the return `"Hello from Quarkus REST";` in `src/main/java/com/example/GreetingResource.java` to `return "Hello, World!";`.
+    
+    Verify the change with `curl` again:
+    ```bash
+    curl http://localhost:8080/hello
+    ```
 3.  **Rename and Refactor the `GreetingResource`**
 
     Rename `GreetingResource.java` to `StatusResource.java` to better reflect its purpose in our Smart City theme.
@@ -56,12 +62,15 @@ Each participant will create a microservice representing a single train line wit
     }
     ```
 
+    Rerun your `curl` tests.
+
 4.  **Run the Tests**
 
-    Run the tests to see the continuous testing feature in action.
+    Still in quarkus dev mode, run the tests by tapping `r`.
+    The tests are probably failing.
 
     ```bash
-    ./mvnw test
+    ./mvnw quarkus:test
     ```
 
     Leave the application in dev mode.
@@ -84,6 +93,18 @@ Each participant will create a microservice representing a single train line wit
     }
     ```
 
+    At this point the live reload may not have picked up the change to the tests. You may have to relaunch your tests
+
+    ```bash
+    ./mvnw quarkus:test
+    ```
+
+    Note: you can still launch your tests with the standart test directive of the mvn plugin
+
+    ```bash
+    mvn test
+    ```
+
 6.  **Save your work**
 
     Commit your changes to Git.
@@ -95,7 +116,26 @@ Each participant will create a microservice representing a single train line wit
 
 ## Final Check
 
-- [ ] Does your application start correctly with `./mvnw quarkus:dev`?
+- [ ] Does your application start correctly with `./mvnw quarkus:dev` or `quarkus dev`?
 - [ ] Can you access the `/status` endpoint in your browser?
 - [ ] Do all of your tests pass?
 - [ ] Have you committed your work to Git?
+
+## Discussion Points
+
+### Quarkus
+
+- **[Quarkus Homepage](https://quarkus.io/)**: The main entry point, great for the official "elevator pitch" and latest news.
+- **[What is Quarkus?](https://quarkus.io/get-started/)**: An introduction to the core concepts of "Supersonic Subatomic Java."
+- **[Quarkus Guides](https://quarkus.io/guides/)**: A practical resource for hands-on examples of almost every feature.
+
+### MicroProfile
+
+- **[Eclipse MicroProfile Homepage](https://microprofile.io/)**: Explains the project's mission to optimize Enterprise Java for microservices.
+- **[MicroProfile Specifications](https://microprofile.io/specifications/)**: Lists all the specifications like Config, Health, Fault Tolerance, and REST Client.
+
+### Jakarta EE
+
+- **[Jakarta EE Homepage](https://jakarta.ee/)**: The official home for the evolution of Java EE under the Eclipse Foundation.
+- **[What is Jakarta EE?](https://jakarta.ee/about/what-is-jakarta-ee/)**: Explains its purpose, its relationship to Java EE, and its role in modern cloud-native Java.
+- **[Jakarta EE Specifications](https://jakarta.ee/specifications/)**: Shows the full breadth of the standards that Quarkus and other frameworks build upon, like Jakarta REST and Jakarta CDI.
