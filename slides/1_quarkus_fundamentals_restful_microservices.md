@@ -94,6 +94,7 @@ style: |
   - [Continuous Testing](https://quarkus.io/guides/continuous-testing)
 - **Dev Services**: Quarkus can automatically provision services like databases for development and testing (to be explored in later labs).
   - [Dev Services Overview](https://quarkus.io/guides/dev-services)
+  - [Azure Service Bus Extension](https://docs.quarkiverse.io/quarkus-azure-services/dev/quarkus-azure-servicebus.html)
 
 ---
 
@@ -107,7 +108,6 @@ style: |
 ## What is Quarkus?
 
 - **Philosophy**: "Supersonic Subatomic Java" - A Kubernetes-native Java stack tailored for GraalVM & HotSpot, crafted from the best of breed Java libraries and standards.
-  - [The Vision](https://quarkus.io/vision/supersonic-subatomic-java)
 - **Cloud-Native Approach**: Optimized for fast startup times and low memory usage, making it ideal for containers and serverless.
 - **Standards-Based**: Built on standards like Jakarta EE and MicroProfile, with a rich ecosystem of extensions.
 
@@ -121,6 +121,7 @@ style: |
 - **Why Quarkus for Cloud?**: Excels in environments like Kubernetes and Serverless due to its resource efficiency and rapid scaling.
   - [Quarkus on Kubernetes](https://quarkus.io/guides/deploying-to-kubernetes)
   - [Quarkus on AWS Lambda](https://quarkus.io/guides/amazon-lambda)
+  - [Quarkus on Azure?](https://quarkus.io/guides/deploying-to-azure-cloud)
 
 ---
 

@@ -107,9 +107,11 @@ Each participant will create a microservice representing a single train line wit
 
 6.  **Save your work**
 
+    Initialize your repository
     Commit your changes to Git.
 
     ```bash
+    git init
     git add .
     git commit -m "feat: Lab 1 complete - initial train line service"
     ```

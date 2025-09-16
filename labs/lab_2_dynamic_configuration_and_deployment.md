@@ -14,6 +14,8 @@ As a key component of the Smart City Transit Network, your `train-line-service` 
 
     Introduce the `Logger`. Open `StatusResource.java` and inject a logger. Add a log statement.
 
+    TODO: Replace jboss `Logger` injected instances with quarkus `Log`
+
     ```java
     // src/main/java/com/example/StatusResource.java
     package com.example;
@@ -133,16 +135,17 @@ As a key component of the Smart City Transit Network, your `train-line-service` 
     quarkus.container-image.tag=latest
     ```
 
-    Note: If not done in your global mvn config, you may also need to expicitly set podman as the container runtime for this app
+    Note: If not done in your global mvn config, you may also need to expicitly set podman as the container builder and/or runtime for this app
 
     ```properties
-    quarkus.container-image.runtime=podman
+    quarkus.container-image.builder=podman
+    quarkus.native.container-runtime=podman
     ```
 
-    Build the container image using jib. Run the following command to build a native executable within a container and prepare the container image that will run the application.
+    Build the container image using jib. Run the following command to build a native executable within a container and prepare the container image that will run the application. > **Note:** If you're having trouble with this command, try removing the quotes.
 
     ```bash
-    ./mvnw package -Pnative -Dquarkus.native.container-build=true -Dquarkus.container-image.build=true
+    ./mvnw package -Pnative -D"quarkus.native.container-build"=true -D"quarkus.container-image.build"=true
     ```
 
     Run the container using Podman.
