@@ -26,6 +26,12 @@ style: |
     background-repeat: no-repeat;
     background-position: right;
   }
+  section.fit-table table {
+    font-size: 22px;
+  }
+  section.fit-table th, section.fit-table td {
+    padding: 4px 8px;
+  }
 ---
 
 <!-- _class: lead -->
@@ -35,27 +41,6 @@ style: |
 ---
 
 # Morning Session 1 (09:00 - 10:00)
-## Topic: Relational Databases with Panache
-
----
-
-# What is Panache?
-
-- **Goal**: Simplify persistence with Hibernate ORM.
-- **Two Patterns**:
-  - **Active Record**: Entity class contains the persistence logic (`extends PanacheEntity`). Great for simpler models.
-  - **Repository**: Separates persistence from repository class (`implements PanacheRepository`). Better for complex queries and separation of concerns.
-- **Key Features**:
-  - No more `EntityManager` boilerplate.
-  - Simplified queries: `Person.find("name", "Scott")`
-  - Automatic generation of CRUD operations.
-- **Guides**:
-  - [Hibernate ORM with Panache](https://quarkus.io/guides/hibernate-orm-panache)
-  - [Hibernate ORM with Panache and Kotlin](https://quarkus.io/guides/hibernate-orm-panache-kotlin)
-
----
-
-# Morning Session 2 (10:45 - 11:45)
 ## Topic: Implementing Persistence
 ### Activity: Hands-on Lab 3
 
@@ -70,6 +55,154 @@ style: |
 
 ---
 
+# Morning Session 2 (10:45 - 11:45)
+## Topic: Relational Databases with Panache
+
+---
+
+# Debrief: Lab 3 (Panache Entity)
+
+- **Goal**: Simplify persistence with Hibernate ORM.
+- **Key Features**:
+  - No more `EntityManager` boilerplate.
+  - Simplified queries: `Person.find("name", "Scott")`
+  - Automatic generation of CRUD operations.
+- **Guides**:
+  - [Hibernate ORM with Panache](https://quarkus.io/guides/hibernate-orm-panache)
+
+---
+
+# Debrief: Lab 3 (Dev Services)
+
+- **Dev Services for PostgreSQL**: Quarkus automatically started a PostgreSQL container for us!
+- [Dev Services for Datasources](https://quarkus.io/guides/datasource#dev-services-for-datasources)
+- **Reactive Datasources**: `quarkus-reactive-oracle-client`
+- **JDBC Data Sources**: `quarkus-jdbc-postgresql`
+
+---
+
+# Debrief: Lab 3 (`@Transactional`)
+
+- Manages the lifecycle of a database transaction.
+  - **Start**: A transaction is automatically started when a method annotated with `@Transactional` is entered.
+  - **Commit**: If the method completes successfully, the transaction is committed.
+  - **Rollback**: If the method throws a runtime exception, the transaction is rolled back.
+- **Why it's required**: All write operations in Panache (like `persist()`, `update()`, `delete()`) must be performed within a transaction.
+- **Where to put it**: Typically on JAX-RS resource methods that modify data, or on methods in a service layer.
+- **Guide**: [Transactions in Quarkus](https://quarkus.io/guides/transaction)
+
+---
+
+<!-- _class: fit-table -->
+# Debrief: Lab 3 (Active Record vs. Repository)
+
+| Feature          | Active Record (`PanacheEntity`)                               | Repository (`PanacheRepository`)                                |
+| ---------------- | ------------------------------------------------------------- | --------------------------------------------------------------- |
+| **Concept**      | Persistence logic is mixed with the business object.          | Persistence logic is separated into a dedicated repository class. |
+| **Usage**        | `person.persist()`, `Person.findById(id)`                     | `personRepository.persist(person)`, `personRepository.findById(id)` |
+| **Pros**         | Simple, concise, great for small to medium applications.      | Better separation of concerns, easier to test and mock.         |
+| **Cons**         | Can violate Single Responsibility Principle, harder to mock.  | More boilerplate code (entity + repository).                    |
+| **When to use?** | When your data model is simple and closely maps to the DB.    | For complex applications or when you need to abstract the data layer. |
+
+---
+
+# The Repository Pattern (Entity)
+
+Separates the persistence logic from the entity.
+
+**1. The Entity (No Panache base class)**
+```java
+@Entity
+public class Person {
+    @Id @GeneratedValue
+    public Long id;
+    public String name;
+    public LocalDate birth;
+
+    // Getters and Setters
+}
+```
+
+---
+
+## The Repository Pattern (Repository)
+
+**2. The Repository**
+```java
+@ApplicationScoped
+public class PersonRepository implements PanacheRepository<Person> {
+
+   // custom queries can be added here
+   public Person findByName(String name){
+     return find("name", name).firstResult();
+   }
+}
+```
+
+---
+
+## The Repository Pattern (Resource)
+
+**3. The Resource**
+```java
+@Inject
+PersonRepository personRepository;
+
+@GET
+@Path("/{id}")
+public Person getById(Long id) {
+    return personRepository.findById(id);
+}
+
+@GET
+@Path("/search/{name}")
+public Person search(String name) {
+    return Person.findByName(name);
+}
+```
+
+---
+
+# Paging and Sorting
+
+```java
+// Create a PanacheQuery object
+PanacheQuery<Person> query = Person.find("status", Status.Alive);
+
+// 1. Set the page size and index
+query.page(Page.of(0, 10)); // 1st page, 10 results
+
+// 2. Get the results for the current page
+List<Person> firstPage = query.list();
+
+// 3. Get the total number of pages
+int pageCount = query.pageCount();
+
+// 4. Get the total number of records
+long recordCount = query.count();
+```
+
+- Sorting is just as easy: `Person.find("status", Status.Alive).list()`
+- **Guide**: [Paging and Sorting](https://quarkus.io/guides/hibernate-orm-panache#paging)
+
+---
+
+# TDD with Quarkus Dev Mode (1)
+
+Quarkus's dev mode (`./mvnw quarkus:dev`) provides an exceptional environment for Test-Driven Development.
+
+- **Continuous Testing**: As soon as you save a file, Quarkus recompiles your code and re-runs the relevant tests.
+- **Instant Feedback**: You get immediate feedback in your terminal, telling you whether your changes fixed a test or broke another one.
+- **Guide**: [Continuous Testing](https://quarkus.io/guides/continuous-testing)
+
+---
+
+# TDD with Quarkus Dev Mode (2)
+![red_green_refactor, width=70%, height=70%](assets/red_green_refactor.png)
+[source](https://content.codecademy.com/programs/tdd-js/articles/red-green-refactor-tdd.png)
+
+---
+
 # Morning Session 3 (12:00 - 12:30)
 ## Topic: Exposing and Documenting REST Endpoints
 
@@ -77,10 +210,23 @@ style: |
 
 # Jakarta RESTful Web Services
 - The standard for creating RESTful web services in Java.
-- **Core Concepts**:
-  - **Annotations**: `@Path`, `@GET`, `@POST`, `@Produces`, `@Consumes`.
-  - **Injection**: Use `@Inject` to bring in other components.
-  - **Path Parameters**: Use `@PathParam` to capture parts of the URL.
+- **Core Annotations**:
+  - `@Path`: Defines the base URI for the resource.
+  - `@GET`, `@POST`, `@PUT`, `@DELETE`: Map to HTTP methods.
+  - `@Produces`: Sets the response media type (e.g., `application/json`).
+  - `@Consumes`: Sets the request media type.
+  - `@PathParam`: Injects URI path parameters.
+- **Returning a `Response`**: For more control, return a `Response` object. This allows you to set headers, status codes, and the response body.
+
+```java
+@POST
+@Transactional
+public Response create(TrainStop stop) {
+    stop.persist();
+    // Return 201 Created with a link to the new resource
+    return Response.created(URI.create("/stops/" + stop.id)).build();
+}
+```
 - **Guide**: [RESTEasy Reactive](https://quarkus.io/guides/resteasy-reactive)
 
 ---

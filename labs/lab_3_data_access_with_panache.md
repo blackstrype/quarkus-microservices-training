@@ -139,16 +139,9 @@ Each `TrainStop` represents a specific event for your train line, such as a sche
 
     import static io.restassured.RestAssured.given;
     import static org.hamcrest.CoreMatchers.is;
-    import static org.hamcrest.Matchers.containsString;
 
     @QuarkusTest
     public class TrainStopResourceTest {
-
-        @BeforeEach
-        @Transactional
-        public void setup() {
-            TrainStop.deleteAll();
-        }
 
         @Test
         public void testCreateTrainStop() {
@@ -296,7 +289,17 @@ Each `TrainStop` represents a specific event for your train line, such as a sche
         }
     ```
 
-6.  **Test the API**
+You will most likely still see a test failure in the `GET /stops` endpoint. We need to clear out the list of persisted train stops before each test.
+
+```java
+    @BeforeEach
+    @Transactional
+    public void setup() {
+        TrainStop.deleteAll();
+    }
+```
+
+1.  **Test the API**
 
     Use `curl` to interact with your new API.
 
@@ -313,17 +316,17 @@ Each `TrainStop` represents a specific event for your train line, such as a sche
 
     List all train stops:
     ```bash
-    curl http://localhost:8080/stops
+    curl http://localhost:8080/stops | jq
     ```
 
     Get a specific train stop by ID:
     ```bash
-    curl http://localhost:8080/stops/1
+    curl http://localhost:8080/stops/1 | jq
     ```
 
     Update a train stop:
     ```bash
-    curl -X PUT -H "Content-Type: application/json" -d '{"stationId": "station-1", "arrivalTime": "2025-09-16T10:05:00Z"}' http://localhost:8080/stops/1
+    curl -X PUT -H "Content-Type: application/json" -d '{"stationId": "station-3", "arrivalTime": "2025-09-16T11:00:00Z"}' http://localhost:8080/stops/3 | jq
     ```
 
     Delete a train stop:
@@ -331,7 +334,7 @@ Each `TrainStop` represents a specific event for your train line, such as a sche
     curl -X DELETE http://localhost:8080/stops/1
     ```
 
-7.  **Save your work**
+2.  **Save your work**
 
     Commit your changes to git.
 
@@ -347,3 +350,7 @@ Each `TrainStop` represents a specific event for your train line, such as a sche
 - [ ] Does Quarkus Dev Services start the database correctly?
 - [ ] Have you committed your work to Git?
 
+## Discussion Points
+
+- [Writing Rest Services With Quarkus](https://quarkus.io/guides/rest)
+- [Panache Entities](https://quarkus.io/guides/hibernate-orm-panache)
