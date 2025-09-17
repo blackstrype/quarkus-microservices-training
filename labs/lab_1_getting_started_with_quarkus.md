@@ -66,7 +66,8 @@ Each participant will create a microservice representing a single train line wit
 
 4.  **Run the Tests**
 
-    Still in quarkus dev mode, run the tests by tapping `r`.
+    Still in quarkus dev mode, run the tests by tapping `r`. You can also start up dev mode and launch the tests by running the `test` goal.
+    
     The tests are probably failing.
 
     ```bash
@@ -93,13 +94,13 @@ Each participant will create a microservice representing a single train line wit
     }
     ```
 
-    At this point the live reload may not have picked up the change to the tests. You may have to relaunch your tests
+    At this point the live reload may not have picked up the change to the tests. You may have to quit dev mode and re-initiate a compile step. You can launch dev mode directly into the tests by using the `quarkus:test` goal.
 
     ```bash
-    ./mvnw quarkus:test
+    quarkus test
     ```
 
-    Note: you can still launch your tests with the standart test directive of the mvn plugin
+    **Note**: you can still run your tests with the standard `test` goal of maven
 
     ```bash
     mvn test
@@ -129,7 +130,7 @@ Each participant will create a microservice representing a single train line wit
 
 - **[Quarkus Homepage](https://quarkus.io/)**: The main entry point, great for the official "elevator pitch" and latest news.
 - **[What is Quarkus?](https://quarkus.io/get-started/)**: An introduction to the core concepts of "Supersonic Subatomic Java."
-- **[Quarkus Guides](https://quarkus.io/guides/)**: A practical resource for hands-on examples of almost every feature.
+- **[Quarkus Guides](https://quarkus.io/guides/)**: A practical gateway for hands-on examples of almost every quarkus feature.
 
 ### MicroProfile
 
