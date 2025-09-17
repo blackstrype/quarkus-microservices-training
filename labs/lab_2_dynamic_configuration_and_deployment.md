@@ -127,7 +127,7 @@ As a key component of the Smart City Transit Network, your `train-line-service` 
     </dependency>
     ```
 
-    Add some config to automatically tag and name the image.
+    Add some config to automatically tag and name the image. This will make it easier to run from a known image group/name/tag.
 
     ```properties
     quarkus.container-image.group=localhost/smessner
@@ -135,17 +135,38 @@ As a key component of the Smart City Transit Network, your `train-line-service` 
     quarkus.container-image.tag=latest
     ```
 
-    Note: If not done in your global mvn config, you may also need to expicitly set podman as the container builder and/or runtime for this app
+    Specify the the container build options
 
     ```properties
-    quarkus.container-image.builder=podman
+    ## Container native image build properties
+    quarkus.native.container-build=true
     quarkus.native.container-runtime=podman
+    quarkus.container-image.build=true
+    quarkus.container-image.builder=podman
     ```
 
-    Build the container image using jib. Run the following command to build a native executable within a container and prepare the container image that will run the application. > **Note:** If you're having trouble with this command, try removing the quotes.
+    `quarkus.container-image.build=true` will specify to produce a container image at build time.
+    `quarkus.native.container-build=true` will specify to build the native Linux executable within a container (not using the local GraalVM/Mandrel tooling).
+    `quarkus.container-image.builder=podman` explicitly specifies to use podman as the container builder.
+    `quarkus.native.container-runtime=podman` explicitly specifies to use podman as the container runtime.
+
+    **Note**: If you don't want container-tool-specific configuration in your app properties you can add it into your global mvn config and use the quarkus-container-image extension in your pom. Quarkus should be able to auto-detect the container builder and runtime automatically, but sometimes this doesn't always work as intended. [source](https://quarkus.io/guides/building-native-image#container-runtime)
+
+    Build the container image.
 
     ```bash
-    ./mvnw package -Pnative -D"quarkus.native.container-build"=true -D"quarkus.container-image.build"=true
+    quarkus build --native
+    ```
+
+    Demonstrate that the built image is indeed using a native binary.
+
+    ```bash
+    podman run -it -p 8080:8080 --entrypoint /bin/sh localhost/smessner/train-line-service:latest
+    ls application
+    java -version
+    ./application
+    ˆC
+    exit
     ```
 
     Run the container using Podman.
@@ -154,15 +175,15 @@ As a key component of the Smart City Transit Network, your `train-line-service` 
     podman run -it -p 8080:8080 localhost/smessner/train-line-service:latest
     ```
     
-    Add a production profile to `application.properties`:
+    Add a production profile to `application.properties` and rebuild:
     ```properties
     %prod.train-line-name=Production-Line-C
     ```
 
-    Override the configuration in the container. Stop the container and restart it, this time overriding the `train-line-name` with an environment variable and running in production mode.
+    Override the configuration in the container by adding the `train-line-name` with an environment variable and running in production mode.
 
     ```bash
-    podman run -it --rm -p 8080:8080 -e QUARKUS_PROFILE=prod -e TRAIN_LINE_NAME=Express-Line-B localhost/smessner/train-line-service:latest
+    podman run -it --rm -p 8080:8080 -e QUARKUS_PROFILE=dev -e TRAIN_LINE_NAME=Express-Line-B localhost/smessner/train-line-service:latest
     ```
 
     Test a few curl commands on the /status endpoint to see how the train-line-name changes in between prod and dev profiles.
@@ -180,10 +201,12 @@ As a key component of the Smart City Transit Network, your `train-line-service` 
 
 - [ ] Can you debug your application with a breakpoint in dev mode?
 - [ ] Can you override the `train-line-name` with an environment variable?
-- [ ] Can you build and run the container image?
+- [ ] Can you build and run the native binary container image?
 - [ ] Have you committed your work to Git?
 
 ## Discussion Points
 
  - [Runtime Performance Comparisons](https://quarkus.io/blog/runtime-performance/)
- - [Config Reference](https://quarkus.io/guides/config-reference)
+ - [Building a Container Image](https://quarkus.io/guides/container-image#building)
+ - [Building a Native Image](https://quarkus.io/guides/building-native-image#container-runtime)
+ - [Configuration Reference](https://quarkus.io/guides/config-reference)
