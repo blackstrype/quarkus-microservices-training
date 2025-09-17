@@ -46,8 +46,12 @@ Open your `application.properties` file and add the following configuration. Thi
 # Keycloak Configuration
 quarkus.oidc.auth-server-url=http://localhost:8082/realms/smart-city
 quarkus.oidc.client-id=train-line-service
-quarkus.oidc.credentials.secret=train-service-secret
+quarkus.oidc.credentials.secret=**********
 ```
+
+- `auth-server-url`: The URL of the Keycloak server
+- `client-id`: the identification used by our train-line-service when contacting the OIDC server (keycloak)
+- `credentials.secret`: The secret key used by your service to authenticate to keycloak (often provided as an injected external configuration secret through environment variables)
 
 ### Step 3: Secure the API
 
@@ -76,6 +80,10 @@ public class TrainStopResource {
 ```
 
 Run the application in dev mode. Trying to access the `/stops` endpoint should now result in a `401 Unauthorized` error.
+
+```bash
+curl -v http://localhost:8080/stops
+```
 
 ### Step 4: Consume the `station-service`
 
@@ -170,18 +178,63 @@ public class TrainStopResource {
 
 #### Configure the REST Client URL
 
-In `application.properties`, tell Quarkus where to find the `station-service`.
+In `application.properties`, tell Quarkus how to configure the `station-service` rest client.
+
+Add the configuration for authenticating with the station-service:
 
 ```properties
-# Rest Client Configuration
-com.example.StationService/mp-rest/url=http://localhost:8081
+# StationService Configuration
+station-service/mp-rest/url=http://localhost:8081
+station-service/mp-rest/token-client = station-service
 ```
+
+- `url`: url where the station-service is available
+- `token-client`: This tells the REST client, "Before you make a request, you must first acquire a Bearer token. Use the OIDC client configuration named station-service to get that token." This property links the REST client to the outbound security configuration below.
+
+```properties
+# OIDC Client Configuration (for outbound requests to station-service)
+quarkus.oidc-client.station-service.auth-server-url=${quarkus.oidc.auth-server-url}
+quarkus.oidc-client.station-service.client-id=${quarkus.oidc.client-id}
+quarkus.oidc-client.station-service.credentials.secret=${quarkus.oidc.credentials.secret}
+quarkus.oidc-client.station-service.grant.type=client
+quarkus.oidc-client.station-service.audience=station-service
+```
+
+- `auth-server-url`: The URL of the Keycloak server (referencing the same as previously)
+- `client-id`: The identification used to identify our service with the station-service.
+- `credentials.secret`: secret used specifically when contacting the station-service. In our scenario it's the same as one used to connect to keycloak.
+- `grant.type`: Which OAuth 2.0 flow to use. In this case it's the standard Client Credentials grant for service-to-service communication.
+- `audience`: Indicates which audience is targeted for this token request. This instructs Keycloak to issue a token which contains an audience claim for `station-service`
 
 ### Step 5: Test with `curl`
 
 You will need a valid JWT token from Keycloak to test the secured endpoints.
 
-**TODO**: Add `curl` commands for testing the secured `create` and `list` endpoints.
+First fetch the Bearer token from the Keycloak server.
+
+```bash
+BEARER_TOKEN=$(curl -sS -X POST \
+    http://localhost:8082/realms/smart-city/protocol/openid-connect/token \
+    -H "Content-Type: application/x-www-form-urlencoded" \
+    -d "grant_type=password" \                                    
+    -d "client_id=train-cli" \ 
+    -d "username=operator" \
+    -d "password=croce" | jq -r '.access_token')
+```
+
+The above command will make the request, use jq to pull only the Bearer token from the response, and store it to the `BEARER_TOKEN` variable.
+
+Now make a request to create a new stop, passing the `BEARER_TOKEN` in the `Authorization` header.
+
+```bash
+curl -v -X POST \                
+  -H "Content-Type: application/json" \                                    
+  -H "Authorization: Bearer ${BEARER_TOKEN}" \            
+  -d '{"stationId": "1", "arrivalTime": "2025-09-16T10:00:00Z"}' \
+  "http://localhost:8080/stops"
+```
+
+If everything is configured as it should be, you should receive a `201 Created` response. Run it again and you'll have the `200 OK` response.
 
 ### Step 6: Save your work
 
@@ -197,3 +250,9 @@ git commit -m "feat: Lab 5 complete - security and rest client"
 - [ ] Is your `TrainStopResource` protected with the `@RolesAllowed` annotation?
 - [ ] Can you call the `station-service` and retrieve data to enrich your `TrainStop`?
 - [ ] Have you committed your work to Git?
+
+## Discussion Points
+
+- [Quarkus Security](https://quarkus.io/guides/security)
+- [OIDC Bearer Token Authentication in Quarkus](https://quarkus.io/guides/security-oidc-bearer-token-authentication#overview-of-the-bearer-token-authentication-mechanism-in-quarkus)
+- [OIDC Authorization Code Flow](https://quarkus.io/guides/security-oidc-code-flow-authentication-tutorial)

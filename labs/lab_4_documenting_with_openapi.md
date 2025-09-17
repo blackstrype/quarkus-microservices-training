@@ -216,3 +216,4 @@ Microservices need to be able to discover and understand each other's APIs. By d
 - [OpenAPI Specification](https://swagger.io/specification/)
 - [Microprofile OpenAPI](https://microprofile.io/specifications/open-api/)
 - [SmallRye OpenAPI implementation](https://github.com/smallrye/smallrye-open-api)
+- [Jakarta Validation Specification](https://jakarta.ee/specifications/bean-validation/3.1/)

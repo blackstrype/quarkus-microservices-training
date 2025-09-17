@@ -261,6 +261,7 @@ public Response create(TrainStop stop) {
 - Enrich the generated documentation with descriptive annotations.
 - Implement an idempotent `create` endpoint for `TrainStopResource`.
 - Explore and test the API using the integrated Swagger UI.
+- Add jakarta Validation to ensure valid `TrainStop` data.
 
 ---
 
