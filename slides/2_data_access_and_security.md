@@ -218,6 +218,10 @@ Quarkus's dev mode (`./mvnw quarkus:dev`) provides an exceptional environment fo
   - `@PathParam`: Injects URI path parameters.
 - **Returning a `Response`**: For more control, return a `Response` object. This allows you to set headers, status codes, and the response body.
 
+---
+
+# Jakarta RESTful Web Services
+
 ```java
 @POST
 @Transactional
@@ -227,7 +231,7 @@ public Response create(TrainStop stop) {
     return Response.created(URI.create("/stops/" + stop.id)).build();
 }
 ```
-- **Guide**: [RESTEasy Reactive](https://quarkus.io/guides/resteasy-reactive)
+- **Guide**: [Quarkus REST](https://quarkus.io/guides/rest)
 
 ---
 
