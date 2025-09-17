@@ -12,29 +12,23 @@ As a key component of the Smart City Transit Network, your `train-line-service` 
 
 1.  **Debugging and Logging in Dev Mode**
 
-    Introduce the `Logger`. Open `StatusResource.java` and inject a logger. Add a log statement.
-
-    TODO: Replace jboss `Logger` injected instances with quarkus `Log`
+    Introduce the `Log`. Open `StatusResource.java` and add a log statement.
 
     ```java
     // src/main/java/com/example/StatusResource.java
-    package com.example;
-
+    import io.quarkus.logging.Log;
     import jakarta.ws.rs.GET;
     import jakarta.ws.rs.Path;
     import jakarta.ws.rs.Produces;
     import jakarta.ws.rs.core.MediaType;
-    import org.jboss.logging.Logger;
 
     @Path("/status")
     public class StatusResource {
 
-        private static final Logger logger = Logger.getLogger(StatusResource.class);
-
         @GET
         @Produces(MediaType.TEXT_PLAIN)
         public String status() {
-            logger.debug("Checking the status of the train line service...");
+            Log.debug("Checking the status of the train line service...");
             return "Operational";
         }
     }
@@ -42,13 +36,9 @@ As a key component of the Smart City Transit Network, your `train-line-service` 
 
     Run the code with `quarkus dev`.
 
-    **Run with the Debugger Attached**: Attach your debugger to port `5005`.
+    **Run with the Debugger Attached**: Use your IDE to attach your debugger to port `5005`.
 
-    ```bash
-    ./mvnw quarkus:dev
-    ```
-
-    Set a breakpoint on the logger line in `status()` and re-run a curl command. Observe the debugger stopping at the breakpoint.
+    Set a breakpoint on the log line in `status()` and re-run a curl command. Observe the debugger stopping at the breakpoint.
 
     **Demonstrate Live Reload**: While the debugger is still attached, add a new logging line
     
@@ -56,8 +46,8 @@ As a key component of the Smart City Transit Network, your `train-line-service` 
     @GET
     @Produces(MediaType.TEXT_PLAIN)
     public String status() {
-        logger.debug("Checking the status of the train line service...");
-        logger.info("Status check successful.");
+        Log.debug("Checking the status of the train line service...");
+        Log.info("Status check successful.");
         return "Operational";
     }
     ```
@@ -73,14 +63,13 @@ As a key component of the Smart City Transit Network, your `train-line-service` 
 
     ```java
     // src/main/java/com/example/StatusResource.java
+    package com.example;
+
     // ...
     import org.eclipse.microprofile.config.inject.ConfigProperty;
 
-    // ...
     @Path("/status")
     public class StatusResource {
-
-        private static final Logger logger = Logger.getLogger(StatusResource.class);
 
         @ConfigProperty(name = "train-line-name")
         String trainLineName;
@@ -88,7 +77,7 @@ As a key component of the Smart City Transit Network, your `train-line-service` 
         @GET
         @Produces(MediaType.TEXT_PLAIN)
         public String status() {
-            logger.info("Status check successful for " + trainLineName);
+            Log.info("Status check successful for " + trainLineName);
             return "Operational";
         }
     }
@@ -114,13 +103,9 @@ As a key component of the Smart City Transit Network, your `train-line-service` 
 
 3.  **Containerize the Application**
 
-    Add the container image extension. Open `pom.xml` and add the `quarkus-container-image-podman` and the `quarkus-container-image-jib` extension.
+    Add the container image extension. Open `pom.xml` and add the `quarkus-container-image-podman` extension.
 
     ```xml
-    <dependency>
-        <groupId>io.quarkus</groupId>
-        <artifactId>quarkus-container-image-jib</artifactId>
-    </dependency>
     <dependency>
         <groupId>io.quarkus</groupId>
         <artifactId>quarkus-container-image-podman</artifactId>
@@ -130,6 +115,7 @@ As a key component of the Smart City Transit Network, your `train-line-service` 
     Add some config to automatically tag and name the image. This will make it easier to run from a known image group/name/tag.
 
     ```properties
+    ## Container image tagging properties
     quarkus.container-image.group=localhost/smessner
     quarkus.container-image.name=train-line-service
     quarkus.container-image.tag=latest
@@ -180,6 +166,10 @@ As a key component of the Smart City Transit Network, your `train-line-service` 
     %prod.train-line-name=Production-Line-C
     ```
 
+    ```bash
+    ./mvnw quarkus:build -Dnative
+    ```
+
     Override the configuration in the container by adding the `train-line-name` with an environment variable and running in production mode.
 
     ```bash
@@ -187,6 +177,12 @@ As a key component of the Smart City Transit Network, your `train-line-service` 
     ```
 
     Test a few curl commands on the /status endpoint to see how the train-line-name changes in between prod and dev profiles.
+
+    ```bash
+    podman run -it --rm -p 8080:8080 -e QUARKUS_PROFILE=dev localhost/smessner/train-line-service:latest
+
+    podman run -it --rm -p 8080:8080 localhost/smessner/train-line-service:latest
+    ```
 
 4.  **Save your work**
 

@@ -85,7 +85,7 @@ Each participant will create a microservice representing a single train line wit
     ```java
     // In StatusResourceTest.java
     @Test
-    public void testHelloEndpoint() {
+    public void testStatusEndpoint() {
         given()
           .when().get("/status")
           .then()
