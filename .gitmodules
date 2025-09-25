@@ -1,0 +1,3 @@
+[submodule "station-service"]
+	path = station-service
+	url = git@github.com:blackstrype/station-service.git
