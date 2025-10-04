@@ -1,0 +1,55 @@
+# keycloak-deployment.yaml
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: keycloak-credentials
+stringData:
+  KEYCLOAK_ADMIN: scott
+  KEYCLOAK_ADMIN_PASSWORD: smessner
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      containers:
+      - name: keycloak
+        image: "quay.io/keycloak/keycloak:latest"
+        args: ["start-dev", "--import-realm"]
+        envFrom:
+        - secretRef:
+            name: keycloak-credentials
+        env:
+        - name: KC_HOSTNAME_URL
+          value: "http://keycloak:8080"
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - name: realm-volume
+          mountPath: "/opt/keycloak/data/import"
+      volumes:
+      - name: realm-volume
+        configMap:
+          name: keycloak-realm-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+spec:
+  type: LoadBalancer
+  selector:
+    app: keycloak
+  ports:
+  - port: 8080
+    targetPort: 8080

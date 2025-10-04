@@ -1,0 +1,77 @@
+# postgres-deployment.yaml
+
+# 1. A Secret for your database password
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-secret
+stringData:
+  POSTGRES_PASSWORD: quarkus
+
+---
+# 2. A PersistentVolumeClaim to request 1GB of disk space for data
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+# 3. The Deployment to run the official PostgreSQL container
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: "postgres:16" # The official, free PostgreSQL image
+        env:
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        - name: POSTGRES_DB
+          value: "trainline_db"
+        - name: POSTGRES_USER
+          value: "user"
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_PASSWORD
+        ports:
+        - containerPort: 5432
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+      volumes:
+      - name: postgres-storage
+        persistentVolumeClaim:
+          claimName: postgres-pvc
+---
+# 4. The Service to expose PostgreSQL inside the cluster
+apiVersion: v1
+kind: Service
+metadata:
+  # This name matches what your train-line-service is already configured to use
+  name: postgres-postgresql
+spec:
+  type: ClusterIP # Only needs to be reachable inside the cluster
+  selector:
+    app: postgres
+  ports:
+  - port: 5432
+    targetPort: 5432

@@ -459,7 +459,21 @@
       ]
     }
   },
-  "groups": [],
+  "groups": [
+    {
+      "id": "7faec563-a1e5-40b4-8838-272c12aeec04",
+      "name": "train-line-operators",
+      "path": "/train-line-operators",
+      "attributes": {},
+      "realmRoles": [],
+      "clientRoles": {
+        "train-line-service": [
+          "train-operator"
+        ]
+      },
+      "subGroups": []
+    }
+  ],
   "defaultRole": {
     "id": "d06ce0e6-4fad-43db-9d21-e0cece764f11",
     "name": "default-roles-smart-city",
@@ -2521,6 +2535,7 @@
     "actionTokenGeneratedByUserLifespan-idp-verify-account-via-email": "",
     "parRequestUriLifespan": "60",
     "clientSessionMaxLifespan": "0",
+    "frontendUrl": "http://keycloak:8080",
     "shortVerificationUri": ""
   },
   "keycloakVersion": "22.0.1",

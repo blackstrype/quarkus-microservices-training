@@ -25,6 +25,8 @@ Here's a breakdown of what it configures:
 
 - **Client Scopes:** It defines a custom scope called `station-service-access`. The `train-line-service` is configured to request this scope by default. When it authenticates, Keycloak will issue an access token that includes this scope, signaling that the `train-line-service` is authorized to access the `station-service`.
 
+- **Groups:** In our case, it provides pre-configured role-mappings, such that any users that are members inherit the role-mapping.
+
 By importing this file, you are automating the entire security setup, allowing you to focus on developing the microservices themselves.
 
 2.  **Run Keycloak with Podman**
@@ -41,11 +43,12 @@ By importing this file, you are automating the entire security setup, allowing y
 
 3.  **Create the User used for creating train stops**
 
+    - Make sure you are in the "smart-city" realm.
     - In the left-hand menu, click "Users".
     - Click "Add user".
-    - Create a new user (e.g., `operator`).
+    - Provide a username (e.g., `operator`).
+    - Click "Join Groups", select the "train-line-operators" group, and click "Join".
     - Navigate to the "Credentials" tab and set a password. Disable "Temporary" to prevent the user from being forced to change the password on their first login.
-    - Navigate to the "Role Mappings" tab, assign role, and filter by clients 'train-line-service' and assign the `train-operator` role.
 
 4.  **Test the Bearer Token request using curl**
 
