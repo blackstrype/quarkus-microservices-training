@@ -1,3 +1,18 @@
-﻿version:v1.0
-Email address to invite [inviteeEmail] Required,Redirection url [inviteRedirectURL] Required,Send invitation message (true or false) [sendEmail],Customized invitation message [customizedMessageBody]
-Example: Istokes@fabrikam.com, https://myapplications.microsoft.com, TRUE, Welcome to the Contoso organization!
+﻿version:v1.0,,,
+Email address to invite [inviteeEmail] Required,Redirection url [inviteRedirectURL] Required,Send invitation message (true or false) [sendEmail],Customized invitation message [customizedMessageBody],
+Example: Istokes@fabrikam.com, https://myapplications.microsoft.com, TRUE, Welcome to the Contoso organization!,
+ruben.fobe@mobilit.fgov.be,https://myapplications.microsoft.com,TRUE,Welcome to the Quarkus Microservices Lab!,
+jan.debo@mobilit.fgov.be,https://myapplications.microsoft.com,TRUE,Welcome to the Quarkus Microservices Lab!,
+raphael.palmeri@mobilit.fgov.be,https://myapplications.microsoft.com,TRUE,Welcome to the Quarkus Microservices Lab!,
+cedric.goossens@mobilit.fgov.be,https://myapplications.microsoft.com,TRUE,Welcome to the Quarkus Microservices Lab!,
+guillaume.verbrugghe@mobilit.fgov.be,https://myapplications.microsoft.com,TRUE,Welcome to the Quarkus Microservices Lab!,
+paolo.cabras@mobilit.fgov.be,https://myapplications.microsoft.com,TRUE,Welcome to the Quarkus Microservices Lab!,
+frank.petit@mobilit.fgov.be,https://myapplications.microsoft.com,TRUE,Welcome to the Quarkus Microservices Lab!,
+werner.jacobs@mobilit.fgov.be,https://myapplications.microsoft.com,TRUE,Welcome to the Quarkus Microservices Lab!,
+tom.kielemoes@mobilit.fgov.be,https://myapplications.microsoft.com,TRUE,Welcome to the Quarkus Microservices Lab!,
+frederic.paye@mobilit.fgov.be,https://myapplications.microsoft.com,TRUE,Welcome to the Quarkus Microservices Lab!,
+yannic.vanboxstael@mobilit.fgov.be,https://myapplications.microsoft.com,TRUE,Welcome to the Quarkus Microservices Lab!,
+jan.debondt@mobilit.fgov.be,https://myapplications.microsoft.com,TRUE,Welcome to the Quarkus Microservices Lab!,
+bart.decoen@mobilit.fgov.be,https://myapplications.microsoft.com,TRUE,Welcome to the Quarkus Microservices Lab!,
+frans.mertens.ext@mobilit.fgov.be,https://myapplications.microsoft.com,TRUE,Welcome to the Quarkus Microservices Lab!,
+cedricminh.schils@mobilit.fgov.be,https://myapplications.microsoft.com,TRUE,Welcome to the Quarkus Microservices Lab!,
