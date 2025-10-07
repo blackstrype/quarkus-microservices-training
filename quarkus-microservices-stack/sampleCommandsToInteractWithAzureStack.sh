@@ -3,6 +3,7 @@
 # Export the IP and Port of the services
 export TRAIN_LINE_IP_AND_PORT=$(kubectl get service train-line-service -n quarkus-lab-environment -o jsonpath='{.status.loadBalancer.ingress[0].ip}'):80
 export KEYCLOAK_IP_AND_PORT=$(kubectl get service keycloak -n quarkus-lab-environment -o jsonpath='{.status.loadBalancer.ingress[0].ip}'):8080
+export TRAIN_LINE_IP_AND_PORT=http://localhost:8080
 
 # Get a Bearer Token from Keycloak for the operator user
 BEARER_TOKEN=$(curl -sS -X POST \
@@ -26,7 +27,6 @@ BEARER_TOKEN=$(curl -sS -X POST \
 # Create a new stop
 curl -v \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer ${BEARER_TOKEN}" \
   -d '{"stationId": "1", "arrivalTime": "2025-09-16T10:00:00Z"}' \
   "http://${TRAIN_LINE_IP_AND_PORT}/stops"
 
@@ -34,7 +34,6 @@ curl -v \
 curl -v \                                                                                                                       
   -H "Authorization: Bearer ${BEARER_TOKEN}" \            
   "http://${TRAIN_LINE_IP_AND_PORT}/stops"
-
 
 # Login to ACR
 export ACR_REFRESH_TOKEN=$(az acr login --name acrquarkustraining20250925 --expose-token | jq -r .refreshToken)
