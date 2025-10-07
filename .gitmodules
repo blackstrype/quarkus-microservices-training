@@ -1,3 +1,6 @@
 [submodule "station-service"]
 	path = station-service
 	url = git@github.com:blackstrype/station-service.git
+[submodule "train-line-service"]
+	path = train-line-service
+	url = git@github.com:blackstrype/train-line-service.git
