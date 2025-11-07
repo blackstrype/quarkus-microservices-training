@@ -449,6 +449,7 @@ Add the `@Fallback` annotation to the `getStationById` method in your `StationSe
 - [ ] Did you try both the manual and automated testing approaches?
 - [ ] Have you implemented the `@CircuitBreaker` with the specified parameters?
 - [ ] Do your mock tests verify that the circuit opens and closes correctly?
+- [ ] Have you implemented `@Fallback` and tested that it?
 - [ ] Have you considered the implications for the SLA of `station-service` and/or `train-line-service`?
 
 ## Discussion Points

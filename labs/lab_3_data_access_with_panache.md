@@ -83,22 +83,6 @@ Each `TrainStop` represents a specific event for your train line, such as a sche
 
 4.  **Write the Production Code for `create`**
 
-    Create a new Java class named `TrainStop` in the `src/main/java/com/example/` directory. This class will be a Panache Entity, so it should extend `PanacheEntity`. Add the following fields: a `stationId` (String) to reference an external station and an `arrivalTime` (Instant).
-
-    ```java
-    package com.example;
-
-    import io.quarkus.hibernate.orm.panache.PanacheEntity;
-    import jakarta.persistence.Entity;
-    import java.time.Instant;
-
-    @Entity
-    public class TrainStop extends PanacheEntity {
-        public String stationId;
-        public Instant arrivalTime;
-    }
-    ```
-
     Create a new Java class named `TrainStopResource` in the `src/main/java/com/example/` directory. This class will expose the RESTful API for managing your train line's stops. Implement the `create` method to handle the `POST` request.
 
     ```java
@@ -120,6 +104,22 @@ Each `TrainStop` represents a specific event for your train line, such as a sche
             trainStop.persist();
             return Response.ok(trainStop).status(201).build();
         }
+    }
+    ```
+    
+    Create a new Java class named `TrainStop` in the `src/main/java/com/example/` directory. This class will be a Panache Entity, so it should extend `PanacheEntity`. Add the following fields: a `stationId` (String) to reference an external station and an `arrivalTime` (Instant).
+
+    ```java
+    package com.example;
+
+    import io.quarkus.hibernate.orm.panache.PanacheEntity;
+    import jakarta.persistence.Entity;
+    import java.time.Instant;
+
+    @Entity
+    public class TrainStop extends PanacheEntity {
+        public String stationId;
+        public Instant arrivalTime;
     }
     ```
 
@@ -305,13 +305,13 @@ You will most likely still see a test failure in the `GET /stops` endpoint. We n
 
     Create new train stop:
     ```bash
-    curl -X POST -H "Content-Type: application/json" -d '{"stationId": "station-1", "arrivalTime": "2025-09-16T10:00:00Z"}' http://localhost:8080/stops
-    curl -X POST -H "Content-Type: application/json" -d '{"stationId": "station-2", "arrivalTime": "2025-09-16T10:30:00Z"}' http://localhost:8080/stops
+    curl -H "Content-Type: application/json" -d '{"stationId": "station-1", "arrivalTime": "2025-09-16T10:00:00Z"}' http://localhost:8080/stops
+    curl -H "Content-Type: application/json" -d '{"stationId": "station-2", "arrivalTime": "2025-09-16T10:30:00Z"}' http://localhost:8080/stops
     ```
 
     Use `jq` to make the responses more readable:
     ```bash
-    curl -X POST -H "Content-Type: application/json" -d '{"stationId": "station-1", "arrivalTime": "2025-09-16T10:00:00Z"}' http://localhost:8080/stops | jq
+    curl -H "Content-Type: application/json" -d '{"stationId": "station-1", "arrivalTime": "2025-09-16T10:00:00Z"}' http://localhost:8080/stops | jq
     ```
 
     List all train stops:

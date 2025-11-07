@@ -131,10 +131,10 @@ As a key component of the Smart City Transit Network, your `train-line-service` 
     quarkus.container-image.builder=podman
     ```
 
-    `quarkus.container-image.build=true` will specify to produce a container image at build time.
-    `quarkus.native.container-build=true` will specify to build the native Linux executable within a container (not using the local GraalVM/Mandrel tooling).
-    `quarkus.container-image.builder=podman` explicitly specifies to use podman as the container builder.
-    `quarkus.native.container-runtime=podman` explicitly specifies to use podman as the container runtime.
+    - `quarkus.container-image.build=true` will specify to produce a container image at build time.
+    - `quarkus.native.container-build=true` will specify to build the native Linux executable within a container (not using the local GraalVM/Mandrel tooling).
+    - `quarkus.container-image.builder=podman` explicitly specifies to use podman as the container builder.
+    - `quarkus.native.container-runtime=podman` explicitly specifies to use podman as the container runtime.
 
     **Note**: If you don't want container-tool-specific configuration in your app properties you can add it into your global mvn config and use the quarkus-container-image extension in your pom. Quarkus should be able to auto-detect the container builder and runtime automatically, but sometimes this doesn't always work as intended. [source](https://quarkus.io/guides/building-native-image#container-runtime)
 
