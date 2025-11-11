@@ -8,6 +8,10 @@ In this lab, you will refactor the synchronous `train-line-service` logic from L
 
 Instead of immediately fetching station details when a `TrainStop` is created, your `train-line-service` will now initiate a SAGA. It will persist the initial stop and send a message to request the station details. A separate consumer will process this request, interact with the `station-service`, and complete the `TrainStop` data asynchronously. This makes your service more resilient and responsive.
 
+
+![SAGA Choreography Diagram](./images/Lab_7_TrainStop_SAGA.drawio.png)
+
+
 ## Prerequisites
 
 - A running instance of Azure Service Bus.
