@@ -35,16 +35,55 @@ style: |
 ---
 
 <!-- _class: lead -->
-# Morning Session 1 (09:00 - 11:00)
-## Topic: Lab 7 - The Resilient SAGA (Hands-on)
+# Quarkus Microservices
+## Day 4
+- Reactive Programming / Virtual Threads
+- SAGA and Messaging
+- Observability
+- Production Operations
 
 ---
 
-# The SAGA Pattern (Theory)
+<!-- _class: lead -->
+# Morning Session 1 (09:00 - 09:45)
+## Topic: Reactive vs. Virtual Threads
+
+---
+
+# 1. Reactive Programming (Mutiny)
+
+- **What is Reactive?** An asynchronous programming paradigm concerned with data streams and the propagation of change.
+- **Key Concepts:**
+  - **Non-blocking:** Threads are not held waiting for I/O operations.
+  - **Event-driven:** The program flow is determined by events.
+  - **Back-pressure:** A mechanism for consumers to control the rate of production.
+- **Connection:** This is the engine behind SmallRye Reactive Messaging (`@Incoming`/`@Outgoing`).
+- **Demo:** Show a simple Mutiny `Uni` or `Multi` to demonstrate the "pipeline" concept.
+
+---
+
+# 2. Virtual Threads (Project Loom)
+
+- **What are Virtual Threads?** Lightweight threads managed by the JVM, not the OS.
+- **Key Concepts:**
+  - Drastically increases the number of concurrent operations a server can handle.
+  - Allows developers to write simple, sequential, blocking-style code that scales massively.
+- **Connection:** The "new" way to achieve high concurrency without the complexity of reactive programming.
+- **Demo:** Show a JAX-RS endpoint annotated with `@RunOnVirtualThread` and discuss the performance implications.
+
+---
+
+<!-- _class: lead -->
+# Morning Session 2 (09:45 - 10:45)
+## Topic: SAGA and Messaging In Practice
+
+---
+
+# The SAGA Pattern (Introduction)
 
 - **What is a SAGA?** A sequence of local transactions where each transaction updates data within a single service.
 - **Purpose:** To manage data consistency across microservices without using distributed transactions.
-- **Long-Lived Transactions:** Ideal for processes that span multiple services and may take a long time to complete.
+- **Long-Lived Processes:** Ideal for workflows that span multiple services and may take a long time to complete.
 - **Failure Handling:** If a local transaction fails, the SAGA executes compensating transactions to undo the preceding transactions.
 
 ---
@@ -55,6 +94,17 @@ style: |
 - **Objective:** Create the initial API endpoint that starts the SAGA.
 - **Action:** The endpoint receives a request and produces the first event/message.
 - **Benefit:** Decouples the synchronous API call from the asynchronous business process.
+
+---
+
+<!-- _class: lead -->
+# Morning Break (11:00 - 11:15)
+
+---
+
+<!-- _class: lead -->
+# Morning Session 2.2 (09:45 - 12:00)
+## Topic: Lab 7 - The Resilient SAGA (Hands-on)
 
 ---
 
@@ -77,12 +127,12 @@ style: |
 ---
 
 <!-- _class: lead -->
-# Morning Break (11:00 - 11:15)
+# Lunch Break (12:00 - 13:00)
 
 ---
 
 <!-- _class: lead -->
-# Morning Session 2 (11:15 - 12:00)
+# Afternoon Session 1 (13:00 - 14:00)
 ## Topic: SAGA and Messaging Discussion
 
 ---
@@ -119,7 +169,7 @@ style: |
 # Key Messaging Concepts
 
 - **Idempotency:** Can a message be processed multiple times with the same result? Consumers *must* be idempotent.
-- **"At-Least-Once" Delivery:** Most message brokers guarantee this. Your system must handle duplicates.
+- **"At-Least-Once" Delivery:** Most message brokers guarantee this. Your system must be designed to handle duplicates.
 - **Message Ordering:** Is the order of messages guaranteed? Often, it's only guaranteed within a partition.
 - **Poison Pills:** A malformed or problematic message that repeatedly causes a consumer to fail.
 
@@ -135,11 +185,7 @@ style: |
 ---
 
 <!-- _class: lead -->
-# Lunch Break (12:00 - 13:00)
-
----
-<!-- _class: lead -->
-# Afternoon Session 1 (13:00 - 14:00)
+# Afternoon Session 2 (14:00 - 15:00)
 ## Topic: Observing Your Microservices
 
 ---
@@ -199,12 +245,12 @@ public class DatabaseConnectionHealthCheck implements HealthCheck {
 ---
 
 <!-- _class: lead -->
-# Afternoon Break (14:00 - 14:15)
+# Afternoon Break (15:00 - 15:15)
 
 ---
 
 <!-- _class: lead -->
-# Afternoon Session 2 (14:15 - 15:45)
+# Afternoon Session 3 (15:15 - 16:15)
 ## Topic: Observability & Production Operations
 
 ---
@@ -223,7 +269,7 @@ public class DatabaseConnectionHealthCheck implements HealthCheck {
 
 # Custom Metrics with `@Counted`
 
-Easily count how many times a method is invoked. This is a great way to monitor when a downstream service is failing.
+Easily count how many times a method is invoked. This is a great way to track how often a downstream service is failing.
 
 ```java
 @ApplicationScoped
@@ -244,7 +290,7 @@ public class StationServiceFallbackHandler {
 
 Visualize your metrics to gain insights into application performance.
 
-!Grafana Dashboard, bg right:70% height:80%
+![Grafana Dashboard](assets/grafana_dashboard.png)
 
 ---
 
@@ -255,7 +301,7 @@ Visualize your metrics to gain insights into application performance.
 - **Demo Steps:**
   1. Enable JSON logging in `application.properties`.
   2. Add contextual data (`MDC.put(...)`) to the SAGA consumer.
-  3. Show the resulting JSON log enriched with the ID.
+  3. Show the resulting JSON log enriched with the contextual ID.
 
 ---
 
@@ -267,35 +313,6 @@ Visualize your metrics to gain insights into application performance.
   - Add `quarkus-opentelemetry`.
   - Trigger the SAGA and show that the **same `traceId`** is automatically propagated from the initial API call, across Azure Service Bus, and appears in the consumer's log.
 - **Discussion:** How this enables end-to-end tracing in tools like Jaeger or Datadog.
-
----
-
-<!-- _class: lead -->
-# Afternoon Session 3 (15:45 - 16:15)
-## Topic: Reactive vs. Virtual Threads
-
----
-
-# 1. Reactive Programming (Mutiny)
-
-- **What is Reactive?** An asynchronous programming paradigm concerned with data streams and the propagation of change.
-- **Key Concepts:**
-  - **Non-blocking:** Threads are not held waiting for I/O operations.
-  - **Event-driven:** The program flow is determined by events.
-  - **Back-pressure:** A mechanism for consumers to control the rate of production.
-- **Connection:** This is the engine behind SmallRye Reactive Messaging (`@Incoming`/`@Outgoing`).
-- **Demo:** Show a simple Mutiny `Uni` or `Multi` to demonstrate the "pipeline" concept.
-
----
-
-# 2. Virtual Threads (Project Loom)
-
-- **What are Virtual Threads?** Lightweight threads managed by the JVM, not the OS.
-- **Key Concepts:**
-  - Drastically increases the number of concurrent operations a server can handle.
-  - Allows developers to write simple, sequential, blocking-style code that scales massively.
-- **Connection:** The "new" way to achieve high concurrency without the complexity of reactive programming.
-- **Demo:** Show a JAX-RS endpoint annotated with `@RunOnVirtualThread` and discuss the performance implications.
 
 ---
 
