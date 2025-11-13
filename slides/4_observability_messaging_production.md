@@ -152,6 +152,27 @@ style: |
 
 ---
 
+# SAGA in Quarkus: Narayana LRA
+
+- [MicroProfile LRA Spec](https://github.com/eclipse/microprofile-lra/blob/master/spec/src/main/asciidoc/microprofile-lra-spec.asciidoc)
+- [Narayana LRA Participant Support](https://quarkus.io/guides/lra)
+
+![Microprofile Logo w:500px](https://microprofile.io/wp-content/uploads/2022/09/microprofile-horizontal-white_bg-tagline-1.svg) ![Narayana Logo w:100px](./assets/narayana_logo.png)
+
+---
+
+# SAGA: Choreography
+
+![Choreography SAGA Diagram h:510px w:1000px](../labs/images/Lab_7_TrainStop_SAGA.drawio.png)
+
+---
+
+# SAGA: Orchestration
+
+![Orchestration SAGA Diagram h:510px w:1000px](./assets/SAGA_Orchestration_Bank_Transfer.drawio.png)
+
+---
+
 # Compensating Transactions & DLQs
 
 - **Compensating Transactions:**
