@@ -2,8 +2,9 @@
 
 POD_NAME="quarkus-lab-7"
 
-SIMULATED_WAIT_MILLIS=${SIMULATED_WAIT_MILLIS:-0}
-SIMULATED_FAIL_RATE=${SIMULATED_FAIL_RATE:-0}
+# Configure for intermittent latence and failure in the station-service. You can adjust these values as needed by setting the environment variables before running this script.
+SIMULATED_WAIT_MILLIS=${SIMULATED_WAIT_MILLIS:-5000}
+SIMULATED_FAIL_RATE=${SIMULATED_FAIL_RATE:-.70}
 echo "SIMULATED_WAIT_MILLIS=$SIMULATED_WAIT_MILLIS"
 echo "SIMULATED_FAIL_RATE=$SIMULATED_FAIL_RATE"
 
