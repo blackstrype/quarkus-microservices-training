@@ -14,8 +14,8 @@ Instead of immediately fetching station details when a `TrainStop` is created, y
 
 ## Prerequisites
 
-- A running instance of Azure Service Bus.
-- Your Quarkus project from the end of Lab 6.
+- A running instance of an amqp-compatible messaging broker
+- Your Quarkus project from the end of Lab 6 (tag solution_lab_6_insecure).
 - You have configured your `application.properties` with the connection details for your Azure Service Bus namespace.
 - You have started up your local stack (run `./quarkus-microservices-stack/start-lab-7.)
 
@@ -37,7 +37,7 @@ Open your `pom.xml` file and add the following extensions:
 ```xml
     <dependency>
         <groupId>io.quarkus</groupId>
-        <artifactId>quarkus-smallrye-reactive-messaging-amqp</artifactId>
+        <artifactId>quarkus-messaging-amqp</artifactId>
     </dependency>
 ```
 
@@ -73,10 +73,10 @@ Inject the `StationDetailsProducer` into your `TrainStopResource`. In the `creat
 ```java
 // In TrainStopResource.java
 @Inject
-StationDetailsProducer StationDetailsProducer;
+StationDetailsProducer stationDetailsProducer;
 
 // ... inside the create() method, after trainStop.persist()
-StationDetailsProducer.requestStationDetails(trainStop.stationId);
+stationDetailsProducer.requestStationDetails(trainStop.stationId);
 ```
 
 #### Step 4: Configure the Messaging Channel
@@ -90,6 +90,13 @@ mp.messaging.outgoing.station-details-requests.address=station-details-requests-
 ```
 
 #### Step 5: Write a Test
+
+Update the `application.properties` config to explicitly use the InMemory smallrye connector.
+
+```properties
+%test.mp.messaging.outgoing.station-details-requests.connector=smallrye-in-memory
+mp.messaging.outgoing.station-details-requests.connector=smallrye-amqp
+```
 
 Create a test to verify that creating a `TrainStop` still works and that a message is sent to the in-memory channel.
 
@@ -122,6 +129,8 @@ public class StationDetailsProducerTest {
     }
 }
 ```
+
+Note: At this point, we have not spun up a test-container, and we have not used an AMQP broker. This is a powerful demonstration of the Dependency Inversion Principle (DIP). Our application code depends only on the abstraction of the channel ("station-details-request"), not a concrete AMQP implementation. Through Dependency Injection, the Quarkus framework provides a Test Double (the InMemoryConnector) during testing, allowing us to validate our logic without external dependencies.
 
 ---
 

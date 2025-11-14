@@ -446,8 +446,8 @@ Add the `@Fallback` annotation to the `getStationById` method in your `StationSe
 
 ```java
 @Test
-    void testFallback_ProvidesDefaultWhenRequestFails() {
-        // Given: Program the mock to fail consecutively to open the circuit breaker
+    void testFallback_ProvidesDefaultWhenCircuitIsOpen() {
+        // Given: Program the mock to fail consecutively and to open the circuit breaker
         Mockito.when(stationService.getStationById(Mockito.anyString()))
                 ???
                 ???
