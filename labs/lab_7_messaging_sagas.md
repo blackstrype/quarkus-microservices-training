@@ -17,6 +17,7 @@ Instead of immediately fetching station details when a `TrainStop` is created, y
 - A running instance of Azure Service Bus.
 - Your Quarkus project from the end of Lab 6.
 - You have configured your `application.properties` with the connection details for your Azure Service Bus namespace.
+- You have started up your local stack (run `./quarkus-microservices-stack/start-lab-7.)
 
 ---
 
@@ -402,6 +403,15 @@ public class StationDetailsResponseTest {
         Assertions.assertTrue(response.details().contains("404"));
     }
 }
+```
+
+### Step 14: Save your work
+
+Commit your changes to Git.
+
+```bash
+git add .
+git commit -m "feat: Lab 7 complete - SAGA Choreography with Reactive Messaging"
 ```
 
 ## Final Check

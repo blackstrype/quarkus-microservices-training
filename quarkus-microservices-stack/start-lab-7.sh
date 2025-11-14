@@ -1,0 +1,40 @@
+#!/bin/bash
+
+POD_NAME="quarkus-lab-7"
+
+SIMULATED_WAIT_MILLIS=${SIMULATED_WAIT_MILLIS:-0}
+SIMULATED_FAIL_RATE=${SIMULATED_FAIL_RATE:-0}
+echo "SIMULATED_WAIT_MILLIS=$SIMULATED_WAIT_MILLIS"
+echo "SIMULATED_FAIL_RATE=$SIMULATED_FAIL_RATE"
+
+if podman pod exists $POD_NAME; then
+  echo "Lab 7 environment pod '$POD_NAME' is already running. Run './stop-lab-7.sh' first."
+  exit 0
+fi
+
+echo "Creating the '$POD_NAME' pod..."
+podman pod create --name $POD_NAME \
+  -p 5432:5432 \
+  -p 8081:8080 \
+  -p 5672:5672
+
+echo "Starting Postgres..."
+podman run -d --pod $POD_NAME --name postgres-lab \
+  -e POSTGRES_USER=user \
+  -e POSTGRES_PASSWORD=quarkus \
+  -e POSTGRES_DB=trainline_db \
+  postgres:16
+
+echo "Starting Station Service..."
+podman run -d --pod $POD_NAME --name station-service-lab \
+  --pull=always \
+  -e SIMULATED_WAIT_MILLIS=$SIMULATED_WAIT_MILLIS \
+  -e SIMULATED_FAIL_RATE=$SIMULATED_FAIL_RATE \
+  quay.io/blackstrype/station-service:insecure
+
+echo "Starting RabbitMQ..."
+podman run -d --pod $POD_NAME --name rabbitmq-lab \
+  rabbitmq:management
+
+echo "Lab 7 environment is running."
+
