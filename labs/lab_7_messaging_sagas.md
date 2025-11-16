@@ -320,7 +320,7 @@ Add a new field to our TrainStop entity to represent the station details.
 ```java
     // In TrainStop.java
     ...
-    @Schema(description = "The name of the station", example = "Central Station")
+    @Schema(description = "The name of the station")
     public String stationName;
 ```
 
@@ -392,15 +392,143 @@ Implement a message consumer that listens for station detail requests, processes
 
 #### Step 6: Create the Message Consumer
 
-Create a new class, `StationDetailsConsumer`, to process incoming messages. This class will consume from the `station-details-requests` channel.
+This time we'll start by the test! We want a consumer that, upon reception of the message makes the call to the station-service with our existing RestClient.
+
+Here's what we want to implement the consumer to do upon each message:
+ - Acknowledge the message (this could be done automatically)
+ - For a message with stationId {s} and TrainStop {t}
+  - If the TrainStop {t} doesn't exist Log an error and exit
+  - Else send a request to station-service for details of station {s}
+    - If the stationDetails request is successful use the stationDetails to update {t}
+    - If the stationDetails request is unsuccessful
+      - If the error is a 404, station {s} doesn't exist in the database
+        - delete {t} from the database
+        - Log a corresponding error
+      - else station {s} may exist in the database but the request failed
+        - Update the TrainStop {t} stationName with "Station details not available"
+        - Log a corresponding error
 
 ```java
-package com.example;
+@QuarkusTest
+public class StationDetailsConsumerTest {
 
-import org.eclipse.microprofile.reactive.messaging.Incoming;
-import jakarta.enterprise.context.ApplicationScoped;
-// Other imports...
+    // We're going to need to mock the StationService
+    ???
 
+    @Inject
+    StationDetailsConsumer stationDetailsConsumer;
+
+    @ConfigProperty(name = "feature.toggle.station-details-async")
+    boolean stationDetailsAsync;
+
+    @BeforeEach
+    @Transactional
+    void setup() {
+        TrainStop.deleteAll();
+    }
+
+    @AfterEach
+    void teardown() {
+        logHandler.clear();
+    }
+
+    @Test
+    @Transactional
+    void testConsumerSuccess() {
+        Assumptions.assumeTrue(stationDetailsAsync, "Station details async feature is disabled");
+
+        // Given
+        // The TrainStop with the StationId exists in the database
+        TrainStop trainStop = new TrainStop();
+        trainStop.stationId = "1";
+        trainStop.arrivalTime = Instant.now();
+        trainStop.persist();
+        // Station details exist and the station service will succeed
+        Station station = new Station();
+        station.id = "1";
+        station.name = "Station 1";
+        station.location = "Location 1";
+        Mockito.when(stationService.getStationById("1")).thenReturn(station);
+
+        // When a message is sent
+        var stationDetailsRequest = new StationDetailsRequestMessage(???, ???);
+        stationDetailsConsumer.processStationDetailsRequest(stationDetailsRequest);
+
+        // Verify that the StationDetailsConsumer processed the message and updated the TrainStop
+        TrainStop updatedTrainStop = TrainStop.findById(trainStop.id);
+        Assertions.assertEquals(station.name, updatedTrainStop.stationName);
+    }
+
+    @Test
+    @Transactional
+    void testConsumerTrainStopNotFound() {
+        Assumptions.assumeTrue(stationDetailsAsync, "Station details async feature is disabled");
+
+        // Given
+        // TrainStop does not exist in the database
+        Long trainStopId = 1L;
+        String stationId = "1"
+
+        // When a message is sent
+        var stationDetailsRequest = new StationDetailsRequestMessage(trainStopId, stationId);
+        stationDetailsConsumer.processStationDetailsRequest(stationDetailsRequest);
+
+        // Verify that the StationDetailsConsumer error was Logged indicating that the TrainStop was not found
+        // Intercepting the logs in this lab has not been done, but you can imagine it here, or if you know how to do it do it! :)
+    }
+
+    @Test
+    @Transactional
+    void testConsumerTrainStopFoundStationNotFound() {
+        Assumptions.assumeTrue(stationDetailsAsync, "Station details async feature is disabled");
+
+        // Given
+        // The TrainStop with the StationId exists in the database
+        TrainStop trainStop = new TrainStop();
+        trainStop.stationId = "1";
+        trainStop.arrivalTime = Instant.now();
+        trainStop.persist();
+        // The station-service does not find the station and returns a 404
+        Mockito.when(???).thenThrow(new WebApplicationException("Station not found", 404));
+
+        // When a message is sent
+        var stationDetailsRequest = new StationDetailsRequestMessage(trainStop.id, trainStop.stationId);
+        stationDetailsConsumer.processStationDetailsRequest(stationDetailsRequest);
+
+        // Verify that the StationDetailsConsumer error was logged indicating that the Station details were not found
+        // Verify that the trainStop was removed from the database
+        Assertions.assertNull(TrainStop.findById(trainStop.id));
+    }
+
+    @Test
+    @Transactional
+    void testConsumerTrainStopFoundStationRequestFailed() {
+        Assumptions.assumeTrue(stationDetailsAsync, "Station details async feature is disabled");
+
+        // Given
+        // The TrainStop with the StationId exists in the database
+        TrainStop trainStop = new TrainStop();
+        trainStop.stationId = "1";
+        trainStop.arrivalTime = Instant.now();
+        trainStop.persist();
+        var stationDetailsRequest = new StationDetailsRequestMessage(trainStop.id, trainStop.stationId);
+        // the station-service request fails with a server error
+        Mockito.when(stationService.getStationById("1")).thenThrow(new WebApplicationException("Station request failed", ???));
+
+        // When a message is sent
+        stationDetailsConsumer.processStationDetailsRequest(stationDetailsRequest);
+
+        // Verify that the StationDetailsConsumer error was logged indicating that the Station details were not found
+        // Verify that the trainStop is updated with an arbitrary value
+        TrainStop updatedTrainStop = TrainStop.findById(trainStop.id);
+        Assertions.assertEquals("Station details not available", updatedTrainStop.stationName);
+    }
+}
+```
+
+There are probably some syntax errors. So let's create a new class, `StationDetailsConsumer`, to process incoming messages. This class will consume from the `station-details-requests` channel.
+
+```java
 @ApplicationScoped
 public class StationDetailsConsumer {
 
@@ -408,262 +536,55 @@ public class StationDetailsConsumer {
     @RestClient
     StationService stationService;
 
-    @Incoming("station-details-requests")
+    @Incoming("station-details-requests-in")
     @Transactional
     @Retry(maxRetries = 3, delay = 1000)
-    public void processStationDetailsRequest(String stationId) {
-        Log.infof("Received station detail request for stationId: %s", stationId);
+    public void processStationDetailsRequest(StationDetailsRequestMessage request) {
+        Log.infof("Received station detail request for trainStop: %d, stationId: %s", request.trainStopId(), request.stationId());
 
-        TrainStop stopToUpdate = TrainStop.find("stationId", stationId).firstResult();
-        if (stopToUpdate == null) {
-            Log.warnf("No TrainStop found for stationId %s, skipping update.", stationId);
+        Optional<TrainStop> stopOptional = TrainStop.findByIdOptional(request.trainStopId());
+        if (stopOptional.isEmpty()) {
+            Log.warnf("No TrainStop with id %d, skipping update.", request.trainStopId());
             return;
         }
+        TrainStop stopToUpdate = stopOptional.get();
 
         try {
-            Station station = stationService.getStationById(stationId);
-            // In a real SAGA, you'd update the TrainStop with details from the station
-            // For now, we just log it.
+            Station station = stationService.getStationById(request.stationId());
             Log.infof("Successfully fetched details for station: %s", station.name);
-            // stopToUpdate.stationName = station.name;
-            // stopToUpdate.persist();
+            // Update the station details (the station.name) and persist
+            ???
+            ???
         } catch (WebApplicationException e) {
-            Log.errorf(e, "Failed to fetch details for station %s. Removing associated TrainStop.", stationId);
-            stopToUpdate.delete();
+            if(e.getResponse().getStatus() == ???) {
+                Log.errorf(e, "StationId %s does not exist. Deleting TrainStop %d", request.stationId(), request.trainStopId());
+                // Delete the trainStop
+                ???
+            } else {
+                Log.errorf(e, "Failed to fetch details for station %s. Updating TrainStop with arbitrary station details", request.stationId());
+                stopToUpdate.stationName = ???;
+                stopToUpdate.persist();
+            }
         }
     }
 }
 ```
 
-#### Step 7: Write Tests for the Consumer
+#### Step 7: Configure the Messaging Channel
 
-Write tests to verify the consumer's logic for both success and failure scenarios.
-
-```java
-@QuarkusTest
-public class StationDetailsConsumerTest {
-
-    @InjectMock
-    @RestClient
-    StationService stationService;
-
-    @Inject
-    @Channel("station-details-requests")
-    InMemoryConnector connector;
-
-    @Test
-    @Transactional
-    void testConsumerSuccess() {
-        // Given a TrainStop exists and the station service will succeed
-        TrainStop.deleteAll();
-        new TrainStop("1", Instant.now()).persist();
-        Mockito.when(stationService.getStationById("1")).thenReturn(new Station("1", "Success Station"));
-
-        // When a message is sent
-        InMemorySource<String> requests = connector.source("station-details-requests");
-        requests.send("1");
-
-        // Then the TrainStop should still exist (and would be updated in a real scenario)
-        Assertions.assertEquals(1, TrainStop.count());
-    }
-
-    @Test
-    @Transactional
-    void testConsumerFailure() {
-        // Given a TrainStop exists and the station service will fail
-        TrainStop.deleteAll();
-        new TrainStop("2", Instant.now()).persist();
-        Mockito.when(stationService.getStationById("2")).thenThrow(new WebApplicationException(404));
-
-        // When a message is sent
-        InMemorySource<String> requests = connector.source("station-details-requests");
-        requests.send("2");
-
-        // Then the TrainStop should be deleted
-        Assertions.assertEquals(0, TrainStop.count());
-    }
-}
+```sh
+...
+mp.messaging.incoming.station-details-requests-in.topic=station-details-requests
+mp.messaging.incoming.station-details-requests-in.connector=smallrye-kafka
 ```
 
-#### Step 8: Refactor the `TrainStopResource`
+#### Step 8: Test if it works
 
-Now that the consumer handles fetching station details, remove the synchronous call to `stationService` from the `create` method in `TrainStopResource`.
-
-```java
-// In TrainStopResource.java, inside create() method
-// REMOVE THIS LINE:
-// Station station = stationService.getStationById(trainStop.stationId);
+```sh
+quarkus test
 ```
 
-## Part 3: The Choreography Completing the SAGA
-
-### Objective
-Connect the SAGA steps by having the consumer produce a subsequent event upon completion. This closes the loop on the asynchronous operation, making the system's state transparent and enabling further workflow steps.
-
-### Action
-Upon successful processing, the consumer will send a `SUCCESS` message to a `station-details-response` channel. If the `TrainStop` is removed (due to the `station-service` call failing), it will produce a `FAIL` message with details. We will add tests to verify that the correct messages appear on the response channel for both `SUCCESS` and `FAIL` cases.
-
-### Choreography
-This approach, where services communicate directly with each other via events without a central controller, is known as **Choreography**. It promotes loose coupling and high autonomy among services.
-
----
-
-### Instructions
-
-#### Step 9: Create a Response Message DTO
-
-To standardize the response format, create a simple `StationDetailResponse` record.
-
-```java
-package com.example;
-
-public record StationDetailResponse(String status, String details, String stationId) {
-    public static StationDetailResponse success(String stationId) {
-        return new StationDetailResponse("SUCCESS", "Station details processed successfully.", stationId);
-    }
-
-    public static StationDetailResponse failure(String stationId, String reason) {
-        return new StationDetailResponse("FAIL", reason, stationId);
-    }
-}
-```
-
-#### Step 10: Update the `StationDetailsProducer`
-
-Add a new `Emitter` to your `StationDetailsProducer` to send the response message. You'll also need the `quarkus-jsonb` dependency if it's not already in your `pom.xml`.
-
-```xml
-<!-- Add if not present -->
-<dependency>
-    <groupId>io.quarkus</groupId>
-    <artifactId>quarkus-jsonb</artifactId>
-</dependency>
-```
-
-```java
-// In StationDetailsProducer.java
-import org.eclipse.microprofile.reactive.messaging.Message;
-// ...
-
-@Inject
-@Channel("station-details-response")
-Emitter<StationDetailResponse> stationDetailsResponseEmitter;
-
-public void sendStationDetailsResponse(StationDetailResponse response) {
-    stationDetailsResponseEmitter.send(response);
-}
-```
-
-#### Step 11: Update the `StationDetailsConsumer` to Produce Responses
-
-Inject the `StationDetailsProducer` into the `StationDetailsConsumer` and modify the logic to send a response message after processing is complete.
-
-```java
-// In StationDetailsConsumer.java
-@Inject
-StationDetailsProducer StationDetailsProducer;
-
-// ... inside processStationDetailsRequest method
-
-try {
-    Station station = stationService.getStationById(stationId);
-    Log.infof("Successfully fetched details for station: %s", station.name);
-    // In a real SAGA, you'd update the TrainStop
-    // stopToUpdate.stationName = station.name;
-    // stopToUpdate.persist();
-    
-    // Send SUCCESS response
-    StationDetailsProducer.sendStationDetailsResponse(StationDetailResponse.success(stationId));
-
-} catch (WebApplicationException e) {
-    Log.errorf(e, "Failed to fetch details for station %s. Removing associated TrainStop.", stationId);
-    stopToUpdate.delete();
-
-    // Send FAIL response
-    String reason = "Failed to fetch station details, received status: " + e.getResponse().getStatus();
-    StationDetailsProducer.sendStationDetailsResponse(StationDetailResponse.failure(stationId, reason));
-}
-```
-
-#### Step 12: Configure the Response Channel
-
-In `application.properties`, configure the new outgoing channel for responses.
-
-```properties
-# Configure the outgoing channel for SAGA responses
-mp.messaging.outgoing.station-details-response.connector=smallrye-amqp
-mp.messaging.outgoing.station-details-response.address=station-details-response-queue
-```
-
-#### Step 13: Write Tests for the Response Messages
-
-Create a new test file or add to an existing one to verify that the consumer produces the correct `SUCCESS` and `FAIL` messages.
-
-```java
-@QuarkusTest
-public class StationDetailsResponseTest {
-
-    @InjectMock
-    @RestClient
-    StationService stationService;
-
-    @Inject
-    @Channel("station-details-requests")
-    InMemoryConnector requestsConnector;
-
-    @Inject
-    @Channel("station-details-response")
-    InMemoryConnector responsesConnector;
-
-    @BeforeEach
-    @Transactional
-    void setup() {
-        TrainStop.deleteAll();
-        responsesConnector.sink("station-details-response").clear();
-    }
-
-    @Test
-    @Transactional
-    void testConsumerSendsSuccessResponse() {
-        // Given a TrainStop exists and the station service will succeed
-        new TrainStop("1", Instant.now()).persist();
-        Mockito.when(stationService.getStationById("1")).thenReturn(new Station("1", "Success Station"));
-        InMemorySource<String> requests = requestsConnector.source("station-details-requests");
-        InMemorySink<StationDetailResponse> responses = responsesConnector.sink("station-details-response");
-
-        // When a message is sent to the request channel
-        requests.send("1");
-
-        // Then a SUCCESS message should be sent to the response channel
-        Assertions.assertEquals(1, responses.received().size());
-        StationDetailResponse response = responses.received().get(0).getPayload();
-        Assertions.assertEquals("SUCCESS", response.status());
-        Assertions.assertEquals("1", response.stationId());
-    }
-
-    @Test
-    @Transactional
-    void testConsumerSendsFailResponse() {
-        // Given a TrainStop exists and the station service will fail
-        new TrainStop("2", Instant.now()).persist();
-        Mockito.when(stationService.getStationById("2")).thenThrow(new WebApplicationException(404));
-        InMemorySource<String> requests = requestsConnector.source("station-details-requests");
-        InMemorySink<StationDetailResponse> responses = responsesConnector.sink("station-details-response");
-
-        // When a message is sent to the request channel
-        requests.send("2");
-
-        // Then a FAIL message should be sent to the response channel
-        Assertions.assertEquals(1, responses.received().size());
-        StationDetailResponse response = responses.received().get(0).getPayload();
-        Assertions.assertEquals("FAIL", response.status());
-        Assertions.assertEquals("2", response.stationId());
-        Assertions.assertTrue(response.details().contains("404"));
-    }
-}
-```
-
-### Step 14: Save your work
+### Step 9: Save your work
 
 Commit your changes to Git.
 
