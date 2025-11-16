@@ -17,6 +17,7 @@ echo "Creating the '$POD_NAME' pod..."
 podman pod create --name $POD_NAME \
   -p 5432:5432 \
   -p 8081:8080 \
+  -p 9092:9092 \
   -p 5672:5672
 
 echo "Starting Postgres..."
@@ -33,9 +34,14 @@ podman run -d --pod $POD_NAME --name station-service-lab \
   -e SIMULATED_FAIL_RATE=$SIMULATED_FAIL_RATE \
   quay.io/blackstrype/station-service:insecure
 
-echo "Starting RabbitMQ..."
-podman run -d --pod $POD_NAME --name rabbitmq-lab \
-  rabbitmq:management
+#echo "Starting RabbitMQ..."
+#podman run -d --pod $POD_NAME --name rabbitmq-lab \
+#  rabbitmq:management
+
+echo "Starting Kafka..."
+podman run -d --pod $POD_NAME --name kafka-lab \
+  apache/kafka:latest
+podman exec -it kafka-lab /opt/kafka/bin/kafka-topics.sh --create --topic station-details-requests --bootstrap-server localhost:9092 --partitions 3 --replication-factor 1
 
 echo "Lab 7 environment is running."
 

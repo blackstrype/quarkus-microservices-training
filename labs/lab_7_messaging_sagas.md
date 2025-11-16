@@ -8,20 +8,18 @@ In this lab, you will refactor the synchronous `train-line-service` logic from L
 
 Instead of immediately fetching station details when a `TrainStop` is created, your `train-line-service` will now initiate a SAGA. It will persist the initial stop and send a message to request the station details. A separate consumer will process this request, interact with the `station-service`, and complete the `TrainStop` data asynchronously. This makes your service more resilient and responsive.
 
-
 ![SAGA Choreography Diagram](./images/Lab_7_TrainStop_SAGA.drawio.png)
-
 
 ## Prerequisites
 
-- A running instance of an amqp-compatible messaging broker
+- A running instance of a kafka messaging broker
 - Your Quarkus project from the end of Lab 6 (tag solution_lab_6_insecure).
-- You have configured your `application.properties` with the connection details for your Azure Service Bus namespace.
+- You have configured your `application.properties` with the connection details for your messaging broker.
 - You have started up your local stack (run `./quarkus-microservices-stack/start-lab-7.)
 
 ---
 
-## Part 1: The SAGA Trigger (The API Endpoint)
+## Part 1: The Feature Toggle
 
 ### Objective
 Create the initial API endpoint that starts the SAGA. The `POST /stops` endpoint will be modified to produce a message instead of synchronously calling the `station-service`.
@@ -32,109 +30,360 @@ Create the initial API endpoint that starts the SAGA. The `POST /stops` endpoint
 
 Open your `pom.xml` file and add the following extensions:
 
-- `quarkus-smallrye-reactive-messaging-amqp`: Provides the connector for AMQP-based brokers like Azure Service Bus.
+- `quarkus-smallrye-reactive-messaging-kafka`: Provides the connector for kafka brokers like redpanda/apache/confluent.
 
 ```xml
     <dependency>
         <groupId>io.quarkus</groupId>
-        <artifactId>quarkus-messaging-amqp</artifactId>
+        <artifactId>quarkus-messaging-kafka</artifactId>
     </dependency>
 ```
 
-#### Step 2: Create a Message Producer
+#### Step 1: Prepare for switch to asynchrounous station details requests
 
-Create a new class, `StationDetailsProducer`, to handle sending messages. This class will have an `@Emitter` that sends a `stationId` to the `station-details-requests` channel.
+Our current functionality makes synchronous calls to the `station-service and applies resiliency patterns on our StationService. Our TrainStopResource tests (especially those of resiliency) are coupled with this functionality. We are changing the contract and introducing breaking changes. In order to prepare for these functional changes we will implement a feature toggle so that our service can continue to work in synchrounous mode and switch over to the new async mode when necessary.
+
+##### Step 1.1: Implement the Async Tests
+Start by implementing the new tests. First, add the feature toggle to the application config
+
+```properties
+# --- Feature Toggles ---
+feature.toggle.station-details-async=true
+```
 
 ```java
 package com.example;
 
-import org.eclipse.microprofile.reactive.messaging.Channel;
-import org.eclipse.microprofile.reactive.messaging.Emitter;
+import io.quarkus.test.junit.QuarkusTest;
+import jakarta.inject.Inject;
+import jakarta.ws.rs.core.Response;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
+
+import java.time.Instant;
+
+/**
+ * Groupe of tests for proving the functionality of async creation and update of a TrainStop. For a POST /stops
+ * - When a valid TrainStop with a stationId of {x} will return a 202 with the new TrainStop not including the station details of {x}
+ * - As part of the request, a station-details-request for the stationId {x} will be sent out
+ */
+@QuarkusTest
+public class TrainStopResourceAsyncTest {
+
+    @Inject
+    TrainStopResource trainStopResource;
+
+    @ConfigProperty(name = "feature.toggle.station-details-async", defaultValue = "false")
+    boolean stationDetailsAsync;
+
+    @Test
+    void testCreateTrainStop() {
+        Assumptions.assumeTrue(stationDetailsAsync, "Station details async feature is disabled");
+
+        // Given a valid trainStop:
+        TrainStop trainStop = new TrainStop();
+        trainStop.stationId = "1";
+        trainStop.arrivalTime = Instant.now();
+
+        // When the trainStop is create is called
+        Response result = trainStopResource.create(trainStop);
+
+        /// Then:
+        // - A 202 should be received
+        Assertions.assertNotNull(result);
+        Assertions.assertEquals(???, ???);
+        TrainStop resultTrainStop = (TrainStop) result.getEntity();
+        Assertions.assertNotNull(resultTrainStop.id);
+        Assertions.assertEquals(???, ???);
+        // - the trainStop with the resultTrainStop.id should be persisted in the database
+        TrainStop persistedTrainStop = ???;
+        Assertions.assertNotNull(persistedTrainStop);
+        Assertions.assertEquals(trainStop.stationId, persistedTrainStop.stationId);
+        // - Note: a station-details-request will be sent out (tested elsewhere)
+    }
+}
+```
+
+##### Step 1.2 Modify the Existing Tests
+
+Modify the `TrainStopResourceTest` so that create calls receive a 202 instead of a 201.
+
+Inject the config property.
+```java
+    @ConfigProperty(name = "feature.toggle.station-details-async")
+    boolean stationDetailsAsync;
+    private int expectedCreateStatusCode;
+```
+
+Toggle the return code to be used for each test.
+```java
+    @BeforeEach
+    @Transactional
+    public void setup()
+    {
+        // Set the expected status code based on the feature toggle
+        expectedCreateStatusCode = stationDetailsAsync ? 202 : 201;
+        ...
+```
+
+In the create method, use `expectedCreateStatusCode` instead of the static `201`.
+```java
+@Test
+    public void testCreateTrainStop() {
+    ...
+    .when().post("/stops")
+    .then()
+    .statusCode(expectedCreateStatusCode)
+    ...
+```
+
+The other test methods utilize `/create`. Make sure they are also using the `expectedCreateStatusCode` when verifying the response status.
+```java
+        """).when().post("/stops").then()
+                .statusCode(expectedCreateStatusCode)
+                .body("stationId", is("station-2"));
+```
+
+Run the tests with the async station details feature toggle disabled. The tests should pass.
+
+```sh
+quarkus test -D=feature.toggle.station-details-async=false
+```
+
+Now, run the test with the feature toggle enabled (already `true` your config). The tests should fail.
+
+```sh
+quarkus test
+```
+
+#### Step 2: Make the Async Tests Pass
+
+Modify the TrainStopResource create method. In order to avoid breaking the current functionality, wrap the existing call in a conditional that will implement async call when the feature is toggled, otherwise the existing implementation.
+```java
+    ...
+
+    @ConfigProperty(name = "feature.toggle.station-details-async", defaultValue = "false")
+    boolean featureStationDetailsAsync;
+    ...
+
+    public Response create(@Valid TrainStop trainStop) {
+        ...
+        // Enrich train stop details
+        int responseCode = Response.Status.CREATED.getStatusCode();
+        if (!this.featureStationDetailsAsync) {
+            Station station = stationService.getStationById(trainStop.stationId);
+            Log.infof("Found station: %s", station.name);
+            // TODO: update trainStop with station details
+            trainStop.persist();
+        } else {
+            trainStop.persist();
+            // TODO: request station details
+            responseCode = Response.Status.ACCEPTED.getStatusCode();
+        }
+
+        return Response.ok(trainStop).status(responseCode).build();
+```
+
+Rerun the non-feature-toggled tests. It should pass.
+```sh
+quarkus test -D=feature.toggle.station-details-async=false
+```
+
+Rerun the feature-toggled tests. There are still failures.
+```sh
+quarkus test
+```
+
+The resilience tests still do not work as expected. Because the Resilience tests are specific to the behavior of the TrainStopResource when in synchrounous mode, we will skip these tests when the async feature is toggled.
+
+ ```java
+    ...
+    @ConfigProperty(name = "feature.toggle.station-details-async", defaultValue = "false")
+    boolean stationDetailsAsync;
+
+    // For each test, add a skip directive if the feature is enabled
+    ...
+    @Test
+    void testRetryPolicy_SucceedsOnThirdAttempt() {
+        Assumptions.assumeFalse(stationDetailsAsync, "Station details async feature is enabled");
+        ...
+ ```
+
+The fallback is no-longer working when in async mode. To correct this, we'll toggle the fallback programmatically.
+
+Move the fallback method into a dedicated handler and add the switch logic.
+```java
+package com.example;
+
+import jakarta.enterprise.context.ApplicationScoped;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.eclipse.microprofile.faulttolerance.ExecutionContext;
+import org.eclipse.microprofile.faulttolerance.FallbackHandler;
+
+@ApplicationScoped
+public class StationFallbackHandler implements FallbackHandler<Station> {
+
+    @ConfigProperty(name = "feature.toggle.station-details-async", defaultValue = "false")
+    boolean stationDetailsAsync;
+
+    @Override
+    public Station handle(ExecutionContext context) {
+        // If the async feature is enabled, propagate exceptions
+        if (stationDetailsAsync) {
+            Throwable failure = context.getFailure();
+            if (failure instanceof RuntimeException) {
+                throw (RuntimeException) failure;
+            } else {
+                throw new RuntimeException(failure);
+            }
+        }
+        // Otherwise, apply the original fallback logic.
+        return StationService.getStationByIdFallback(null);
+    }
+}
+
+Update the StationService interface to use the StationFallbackHandler.
+```java
+    ...
+    @Fallback(StationFallbackHandler.class)
+    Station getStationById(@PathParam("id") String id);
+    ...
+}
+```
+
+```
+
+ Rerun the feature-toggled tests.
+```sh
+quarkus test
+```
+
+#### Step 3: Commit changes
+
+If everything is still working properly between the feature toggle and the previous functionality, commit your changes.
+
+```sh
+git add .
+git commit "feat: Lab 7 in progress - Implement feature toggle for async station details requests."
+```
+
+### Part 2: The SAGA Trigger
+
+#### Objective
+
+Now that our feature toggle is working, we can start introducing the messaging logic the will make the request for station details.
+
+#### Instructions
+
+#### Step 1: Create a Message Producer
+
+Create a new class, `StationDetailsProducer`, to handle sending messages. This class will have an `@Emitter` that sends a request to the `station-details-requests` channel.
+
+```java
+package com.example;
+
+import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import org.eclipse.microprofile.reactive.messaging.Channel;
+import org.eclipse.microprofile.reactive.messaging.Emitter;
 
 @ApplicationScoped
 public class StationDetailsProducer {
 
     @Inject
-    @Channel("station-details-requests")
-    Emitter<String> stationDetailsRequestEmitter;
+    @Channel("station-details-requests-out")
+    Emitter<StationDetailsRequestMessage> stationDetailsRequestEmitter;
 
-    public void requestStationDetails(String stationId) {
-        stationDetailsRequestEmitter.send(stationId);
+    public void requestStationDetails(Long trainStopId, String stationId) {
+        Log.infof("Requesting station details for trainStop: %d, stationId: %s", trainStopId, stationId);
+        stationDetailsRequestEmitter.send(new StationDetailsRequestMessage(trainStopId, stationId));
     }
 }
+
 ```
 
-#### Step 3: Update the `TrainStopResource`
-
-Inject the `StationDetailsProducer` into your `TrainStopResource`. In the `create` method, after persisting the `TrainStop`, call the producer to send the message. For now, we will leave the synchronous call to `stationService` to ensure nothing breaks yet.
+We will send a StationDetailsRequestMessage to the `station-details-requests` channel. Implement the StationDetailsRequestMessage record.
 
 ```java
-// In TrainStopResource.java
-@Inject
-StationDetailsProducer stationDetailsProducer;
+package com.example;
 
-// ... inside the create() method, after trainStop.persist()
-stationDetailsProducer.requestStationDetails(trainStop.stationId);
+public record StationDetailsRequestMessage(Long trainStopId, String stationId) {}
 ```
 
-#### Step 4: Configure the Messaging Channel
+#### Step 2: Update the `TrainStopResource`
 
-In `application.properties`, configure the outgoing channel to connect to your Azure Service Bus queue.
+Add a new field to our TrainStop entity to represent the station details.
+
+```java
+    // In TrainStop.java
+    ...
+    @Schema(description = "The name of the station", example = "Central Station")
+    public String stationName;
+```
+
+Inject the `StationDetailsProducer` into your `TrainStopResource`. In the `create` method, after persisting the `TrainStop`, call the producer to send the message.
+
+```java
+    // In TrainStopResource.java
+    ...
+    @Inject
+    StationDetailsProducer stationDetailsProducer;
+
+    ...
+    // Inside create method
+        // Enrich train stop details
+        int responseCode = Response.Status.CREATED.getStatusCode();
+        if (!this.featureStationDetailsAsync) {
+            Station station = stationService.getStationById(trainStop.stationId);
+            Log.infof("Found station: %s", station.name);
+            trainStop.stationName = station.name; // Note: this line changes behaviour of existing functionality. Don't do this normally
+            trainStop.persist();
+        } else {
+            trainStop.persist();
+            stationDetailsProducer.???;
+            responseCode = Response.Status.ACCEPTED.getStatusCode();
+        }
+
+        return Response.ok(trainStop).status(responseCode).build();
+```
+
+#### Step 3: Configure the Messaging Channel
+
+In `application.properties`, configure the outgoing channel to connect to your messaging broker.
 
 ```properties
 # Configure the outgoing channel for SAGA requests
-mp.messaging.outgoing.station-details-requests.connector=smallrye-amqp
-mp.messaging.outgoing.station-details-requests.address=station-details-requests-queue
+mp.messaging.outgoing.station-details-requests-out.topic=station-details-requests
+mp.messaging.outgoing.station-details-requests-out.connector=smallrye-kafka
 ```
 
-#### Step 5: Write a Test
+#### Step 4: Test if it works
 
-Update the `application.properties` config to explicitly use the InMemory smallrye connector.
+Ideally, we have automated tests for this, but let's go ahead and test that create requests produce station-detail-request messages. Start up your lab environment if you haven't already.
 
-```properties
-%test.mp.messaging.outgoing.station-details-requests.connector=smallrye-in-memory
-mp.messaging.outgoing.station-details-requests.connector=smallrye-amqp
+Run your train-line-service in dev mode
+```sh
+quarkus dev
 ```
 
-Create a test to verify that creating a `TrainStop` still works and that a message is sent to the in-memory channel.
-
-```java
-@QuarkusTest
-public class StationDetailsProducerTest {
-
-    @Inject
-    @Channel("station-details-requests")
-    InMemoryConnector connector;
-
-    @Test
-    void testCreateStopSendsMessage() {
-        // Given an in-memory channel for station-details-requests
-        InMemorySource<String> requests = connector.source("station-details-requests");
-
-        // When a new TrainStop is created via the REST endpoint
-        given()
-            .contentType(MediaType.APPLICATION_JSON)
-            .body("{\"stationId\": \"123\", \"arrivalTime\": \"2025-09-16T10:00:00Z\"}")
-        .when()
-            .post("/stops")
-        .then()
-            .statusCode(201);
-
-        // Then a message should be sent to the channel
-        Assertions.assertEquals(1, requests.received().size());
-        String receivedPayload = requests.received().get(0).getPayload();
-        Assertions.assertEquals("123", receivedPayload);
-    }
-}
+Make a request to create a TrainStop
+```sh
+DATE_TIME=$(date -u +$DATE_TIME_FORMAT)
+STATION_ID=$((STATION_ID % 3 + 1))
+curl -v \
+  -H "Content-Type: application/json" \
+  -d '{"stationId": "'${STATION_ID}'", "arrivalTime": "'${DATE_TIME}'"}' \
+  "http://${TRAIN_LINE_IP_AND_PORT}/stops"
 ```
 
-Note: At this point, we have not spun up a test-container, and we have not used an AMQP broker. This is a powerful demonstration of the Dependency Inversion Principle (DIP). Our application code depends only on the abstraction of the channel ("station-details-request"), not a concrete AMQP implementation. Through Dependency Injection, the Quarkus framework provides a Test Double (the InMemoryConnector) during testing, allowing us to validate our logic without external dependencies.
+Open the dev-ui and use the `Apache Kafka Client` extension to view the `station-details-request` topic. You should be able to see the message produced for the last TrainStop created.
 
 ---
 
-## Part 2: The SAGA Step & Resilience (The Consumer)
+## Part 3: The SAGA Step & Resilience (The Consumer)
 
 ### Objective
 Implement a message consumer that listens for station detail requests, processes them by calling the `station-service`, and applies resilience patterns.
@@ -186,17 +435,7 @@ public class StationDetailsConsumer {
 }
 ```
 
-#### Step 7: Refactor the `TrainStopResource`
-
-Now that the consumer handles fetching station details, remove the synchronous call to `stationService` from the `create` method in `TrainStopResource`.
-
-```java
-// In TrainStopResource.java, inside create() method
-// REMOVE THIS LINE:
-// Station station = stationService.getStationById(trainStop.stationId);
-```
-
-#### Step 8: Write Tests for the Consumer
+#### Step 7: Write Tests for the Consumer
 
 Write tests to verify the consumer's logic for both success and failure scenarios.
 
@@ -244,6 +483,16 @@ public class StationDetailsConsumerTest {
         Assertions.assertEquals(0, TrainStop.count());
     }
 }
+```
+
+#### Step 8: Refactor the `TrainStopResource`
+
+Now that the consumer handles fetching station details, remove the synchronous call to `stationService` from the `create` method in `TrainStopResource`.
+
+```java
+// In TrainStopResource.java, inside create() method
+// REMOVE THIS LINE:
+// Station station = stationService.getStationById(trainStop.stationId);
 ```
 
 ## Part 3: The Choreography Completing the SAGA
@@ -442,3 +691,4 @@ git commit -m "feat: Lab 7 complete - SAGA Choreography with Reactive Messaging"
 *   **Compensating Transactions:** In our failure case, we delete the `TrainStop`. This is a "compensating transaction"—an action that undoes the initial step. What would a compensating transaction look like if other services had already acted on the initial `TrainStop` creation? This is a major challenge in SAGA patterns.
 *   **Dead-Letter Queues (DLQs):** What happens if a message consistently fails processing even after our `@Retry` policy is exhausted? The message might be lost. Most message brokers support a Dead-Letter Queue (DLQ), where poison pills (un-processable messages) are sent for manual inspection and intervention. This is a critical component for production-grade systems.
 *   **Observability in Asynchronous Systems:** Tracing a request across multiple services and message queues is difficult. How would you know that a specific `POST /stops` request resulted in a specific `FAIL` message three seconds later? Distributed tracing (e.g., using OpenTelemetry) becomes essential for observability.
+*   **Properly testing StationService with WireMock:** Now that we have separated concerns, the StationService retry, timeout, and fallback logic isn't tested. Testing the RestClient can be done with a [MockHTTPServer like WireMock](https://quarkus.io/guides/rest-client#using-a-mock-http-server-for-tests)
