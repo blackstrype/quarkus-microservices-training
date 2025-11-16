@@ -584,6 +584,24 @@ mp.messaging.incoming.station-details-requests-in.connector=smallrye-kafka
 quarkus test
 ```
 
+If all of the tests are passing, deploy your service and test if it works in the lab environment stack.
+
+Use the following curl commands to make create requests and subsequently view the results:
+
+```sh
+DATE_TIME=$(date -u +$DATE_TIME_FORMAT)
+STATION_ID=$((STATION_ID % 3 + 1))
+curl -v \
+  -H "Content-Type: application/json" \
+  -d '{"stationId": "'${STATION_ID}'", "arrivalTime": "'${DATE_TIME}'"}' \
+  "http://${TRAIN_LINE_IP_AND_PORT}/stops"
+```
+
+```sh
+# Use the id returned in the response of the above request
+curl localhost:8080/stops/${id}
+```
+
 ### Step 9: Save your work
 
 Commit your changes to Git.
