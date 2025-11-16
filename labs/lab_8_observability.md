@@ -149,7 +149,18 @@ Once in the Grafana UI, first stop is to see the Micrometer OpenTelemetry Bridge
 Next, go into (Drilldown -> Metrics -> Let's Start!). In the 'Search Metrics' bar, search for "station". You should be able to see our customly tagged metrics.
 Grafana is a powerful monitoring tool. You can set up some elaborate dashboards and store them.
 
-### Step 9: Save your work
+#### Step 2: Add Logging
+
+The logging Dashboard does not yet show any logs. Simply enable OTEL logging and visit Dashboards -> Quarkus OpenTelemetry Logging.
+
+```properties
+quarkus.otel.logs.enabled=true
+```
+
+Generate some of the previous traffic to have some logs collected.
+Logging can be and should be customized. Find more information here: [Quarkus Open Telemetry Logging](https://quarkus.io/guides/opentelemetry-logging)
+
+### Part 4: Save your work
 
 Commit your changes to Git.
 
@@ -164,6 +175,7 @@ git commit -m "feat: Lab 8 complete - Health and Metrics"
 - [ ] Does your service have base metrics available ?
 - [ ] Are you able to collect metrics for your station-details requests using `@Counted` and `@Timed`?
 - [ ] Were you able to launch Grafana with OpenTelemetry ?
+- [ ] Were you able to quickly active OTEL Logging ?
 
 ## Discussion Points
 

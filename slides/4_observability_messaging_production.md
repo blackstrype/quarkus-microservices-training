@@ -59,6 +59,7 @@ style: |
   - **Back-pressure:** A mechanism for consumers to control the rate of production.
 - **Connection:** This is the engine behind SmallRye Reactive Messaging (`@Incoming`/`@Outgoing`).
 - **Demo:** Show a simple Mutiny `Uni` or `Multi` to demonstrate the "pipeline" concept.
+  - https://quarkus.io/guides/getting-started-reactive
 
 ---
 
@@ -69,7 +70,7 @@ style: |
   - Drastically increases the number of concurrent operations a server can handle.
   - Allows developers to write simple, sequential, blocking-style code that scales massively.
 - **Connection:** The "new" way to achieve high concurrency without the complexity of reactive programming.
-- **Demo:** Show a JAX-RS endpoint annotated with `@RunOnVirtualThread` and discuss the performance implications.
+- **Demo:** Quotes Processor using @RunOnVirtualThread
 
 ---
 
