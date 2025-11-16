@@ -260,7 +260,7 @@ public class DatabaseConnectionHealthCheck implements HealthCheck {
 - **Objective:** Implement readiness checks so Kubernetes knows if the service is ready to consume messages.
 - **Verify Connections:**
   - Connection to the PostgreSQL Database.
-  - Connection to the Azure Service Bus.
+  - Connection to the Message Broker.
 - **Demo:** Show the service reporting "DOWN" when the broker is inaccessible and "UP" when it's available.
 
 ---
