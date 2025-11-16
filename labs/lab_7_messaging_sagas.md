@@ -613,14 +613,13 @@ git commit -m "feat: Lab 7 complete - SAGA Choreography with Reactive Messaging"
 
 ## Final Check
 
-- [ ] Have you added the `quarkus-smallrye-reactive-messaging-amqp` and `quarkus-jsonb` dependencies to your `pom.xml`?
-- [ ] Does your `StationDetailsProducer` have emitters for both `station-details-requests` and `station-details-response`?
+- [ ] Have you added the neccessary dependencies to your `pom.xml`?
+- [ ] Does your `StationDetailsProducer` have an emitter for `station-details-requests`?
 - [ ] Does your `TrainStopResource` correctly produce a message to start the SAGA?
-- [ ] Does your `StationDetailsConsumer` consume the request, call the `station-service`, and produce a `SUCCESS` or `FAIL` response message?
+- [ ] Does your `StationDetailsConsumer` consume the request, call the `station-service`, and update the `TrainStop` as specified?
 - [ ] Are both the request and response channels correctly configured in `application.properties`?
 - [ ] Do your tests verify that the `TrainStopResource` sends the initial message?
 - [ ] Do your tests for the `StationDetailsConsumer` cover both the success and failure cases, including the deletion of the `TrainStop` on failure?
-- [ ] Do your final tests confirm that the correct `SUCCESS` and `FAIL` `StationDetailResponse` messages are sent to the response channel?
 
 ## Discussion Points
 
