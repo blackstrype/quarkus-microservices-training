@@ -163,6 +163,8 @@ quarkus test
 #### Step 2: Make the Async Tests Pass
 
 Modify the TrainStopResource create method. In order to avoid breaking the current functionality, wrap the existing call in a conditional that will implement async call when the feature is toggled, otherwise the existing implementation is used.
+
+Also, our contract has slightly changed. Don't forget to update the OpenAPI annotations. Because we'll be supporting both modes for a while, include a description for both 201 and 202 responses.
 ```java
     ...
 
@@ -170,6 +172,9 @@ Modify the TrainStopResource create method. In order to avoid breaking the curre
     boolean featureStationDetailsAsync;
     ...
 
+    @APIResponse(responseCode = "201", description = "(sync mode) Train stop created successfully with station details")
+    @APIResponse(responseCode = "202", description = "(async mode) Train stop creation accepted without station details")
+    ...
     public Response create(@Valid TrainStop trainStop) {
         ...
         // Enrich train stop details
