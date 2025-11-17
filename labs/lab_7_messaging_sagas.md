@@ -371,6 +371,7 @@ quarkus dev
 
 Make a request to create a TrainStop
 ```sh
+DATE_TIME_FORMAT="%Y-%m-%dT%H:%M:%SZ"
 DATE_TIME=$(date -u +$DATE_TIME_FORMAT)
 STATION_ID=$((STATION_ID % 3 + 1))
 curl -v \
@@ -380,6 +381,14 @@ curl -v \
 ```
 
 Open the dev-ui and use the `Apache Kafka Client` extension to view the `station-details-request` topic. You should be able to see the message produced for the last TrainStop created.
+
+#### Step 5: Save your work
+
+Commit your changes to Git.
+```sh
+git add .
+git commit -m "feat: Lab 7 in progress: StationDetailsProducer implemented"
+```
 
 ---
 
