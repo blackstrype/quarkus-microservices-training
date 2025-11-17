@@ -63,6 +63,73 @@ style: |
 
 ---
 
+# 1. Reactive Programming Fork-Join
+```java
+public Uni<DashboardData> getDashboard(String userId) {
+    // 1. Define the two independent, asynchronous actions
+    Uni<User> userUni = userService.getUser(userId);
+    Uni<List<Notification>> notificationsUni = notificationService.getNotifications(userId);
+
+    // 2. Combine them
+    return Uni.combine().all().unis(userUni, notificationsUni)
+        // 3. The 'combine' operation returns a List<Object>
+        .asTuple()
+        
+        // 4. When both are complete, transform the tuple into the final DTO
+        .onItem().transform(tuple -> {
+            User user = tuple.getItem1();
+            List<Notification> notifications = tuple.getItem2();
+            return new DashboardData(user, notifications);
+        });
+}
+```
+
+---
+
+# 1. Reactive vs. Completable Futures
+```java
+public class DashboardService {
+
+    private final UserService userService = new UserService();
+    private final NotificationService notificationService = new NotificationService();
+
+    // You need a thread pool to run tasks in parallel.
+    // Use a try-with-resources block or manage its lifecycle carefully.
+    public DashboardData getDashboard(String userId) 
+        throws ExecutionException, InterruptedException {
+
+        // Use a fixed thread pool for parallel execution
+        try (ExecutorService executor = Executors.newFixedThreadPool(2)) {
+
+            // 1. Fork: Submit the first task to the thread pool
+            CompletableFuture<User> userFuture = CompletableFuture.supplyAsync(() -> 
+                userService.getUser(userId), executor
+            );
+
+            // 2. Fork: Submit the second task to the thread pool (runs in parallel)
+            CompletableFuture<List<Notification>> notificationsFuture = CompletableFuture.supplyAsync(() ->
+                notificationService.getNotifications(userId), executor
+            );
+
+            // 3. Join & Combine: 
+            //    thenCombine waits for *both* futures to complete, 
+            //    then provides their results to the combining function.
+            CompletableFuture<DashboardData> combinedFuture = userFuture.thenCombine(
+                notificationsFuture,
+                (user, notifications) -> new DashboardData(user, notifications)
+            );
+
+            // 4. Get Result (Blocking):
+            //    This is the main difference from Mutiny. 
+            //    We must now block the current thread to wait for the result.
+            return combinedFuture.get(); 
+        }
+    }
+}
+```
+
+---
+
 # 2. Virtual Threads (Project Loom)
 
 - **What are Virtual Threads?** Lightweight threads managed by the JVM, not the OS.
@@ -227,9 +294,10 @@ Observability is key to debugging, monitoring, and maintaining a healthy system.
 
 Exposes health check procedures to let orchestrators (like Kubernetes) know if your application is healthy.
 
-- **Two types of checks**:
+- **Three types of checks**:
   - **Liveness (`/q/health/live`)**: Is the application running? If this fails, the container should be restarted.
   - **Readiness (`/q/health/ready`)**: Is the application ready to accept requests? If this fails, the container should be temporarily removed from the load balancer.
+  - **Startup Check (`/q/health/started`):** Is the app component started ? Allows for a DOWN status while starting up.
 - **Guide**: [MicroProfile Health](https://quarkus.io/guides/microprofile-health)
 
 ---
@@ -282,10 +350,11 @@ public class DatabaseConnectionHealthCheck implements HealthCheck {
 
 - **Topic:** Instrumenting the application for performance monitoring.
 - **Micrometer:** The de facto standard for metrics in the Java ecosystem.
-- **Demo Steps:**
-  1. Add `quarkus-micrometer-registry-prometheus`.
+- **Steps:**
+  1. Add `quarkus-smallrye-metrics`.
   2. Add a `@Counted` metric to the SAGA consumer.
   3. Show the new custom metric in the `/q/metrics` output.
+  4. Add `quarkus-micrometer-registry-prometheus` to export in a Prometheus format
 
 ---
 
@@ -312,7 +381,7 @@ public class StationServiceFallbackHandler {
 
 Visualize your metrics to gain insights into application performance.
 
-![Grafana Dashboard](assets/grafana_dashboard.png)
+![Grafana Dashboard h:450px](assets/grafana_dashboard.png)
 
 ---
 
@@ -351,7 +420,7 @@ Visualize your metrics to gain insights into application performance.
 # End of Training
 ### Thank You!
 
-![Scott Messner](assets/avatar.png) **Scott Messner**
-- ![Email](assets/email-icon.png) <scott.m.messner@gmail.com>
-- ![GitHub](assets/github-icon.png) [github.com/blackstrype/quarkus-microservices-training](https://github.com/blackstrype/quarkus-microservices-training)
-- ![LinkedIn](assets/linkedin-icon.png) [linkedin.com/in/scott-messner-0264231a](https://www.linkedin.com/in/scott-messner-0264231a/)
+- ![Scott Messner h:70px l:50px](assets/avatar.png) **Scott Messner**
+- ![Email h:50px l:50px](assets/email_icon.png) <scott.m.messner@gmail.com>
+- ![GitHub h:50px l:50px](assets/github_icon.png) [github.com/blackstrype/quarkus-microservices-training](https://github.com/blackstrype/quarkus-microservices-training)
+- ![LinkedIn h:50px l:50px](assets/linkedin_icon.png) [linkedin.com/in/scott-messner-0264231a](https://www.linkedin.com/in/scott-messner-0264231a/)
