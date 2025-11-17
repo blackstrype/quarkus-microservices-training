@@ -171,7 +171,7 @@ public class DashboardService {
 ---
 
 <!-- _class: lead -->
-# Morning Session 2.2 (09:45 - 12:00)
+# Morning Session 2.2 (11:15 - 12:00)
 ## Topic: Lab 7 - The Resilient SAGA (Hands-on)
 
 ---

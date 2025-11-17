@@ -108,7 +108,7 @@ public class TrainStopResourceAsyncTest {
 
 ##### Step 1.2 Modify the Existing Tests
 
-Modify the `TrainStopResourceTest` so that create calls receive a 202 instead of a 201.
+Modify the `TrainStopResourceTest` so that create calls receive a 202 instead of a 201 when the feature toggle is enabled.
 
 Inject the config property.
 ```java
@@ -141,6 +141,8 @@ In the create method, use `expectedCreateStatusCode` instead of the static `201`
 
 The other test methods utilize `/create`. Make sure they are also using the `expectedCreateStatusCode` when verifying the response status.
 ```java
+        """
+        ...
         """).when().post("/stops").then()
                 .statusCode(expectedCreateStatusCode)
                 .body("stationId", is("station-2"));
@@ -152,7 +154,7 @@ Run the tests with the async station details feature toggle disabled. The tests 
 quarkus test -D=feature.toggle.station-details-async=false
 ```
 
-Now, run the test with the feature toggle enabled (already `true` your config). The tests should fail.
+Now, run the test with the feature toggle enabled (already `true` from your config). The tests should fail.
 
 ```sh
 quarkus test
@@ -160,7 +162,7 @@ quarkus test
 
 #### Step 2: Make the Async Tests Pass
 
-Modify the TrainStopResource create method. In order to avoid breaking the current functionality, wrap the existing call in a conditional that will implement async call when the feature is toggled, otherwise the existing implementation.
+Modify the TrainStopResource create method. In order to avoid breaking the current functionality, wrap the existing call in a conditional that will implement async call when the feature is toggled, otherwise the existing implementation is used.
 ```java
     ...
 
@@ -243,6 +245,7 @@ public class StationFallbackHandler implements FallbackHandler<Station> {
         return StationService.getStationByIdFallback(null);
     }
 }
+```
 
 Update the StationService interface to use the StationFallbackHandler.
 ```java
@@ -251,8 +254,6 @@ Update the StationService interface to use the StationFallbackHandler.
     Station getStationById(@PathParam("id") String id);
     ...
 }
-```
-
 ```
 
  Rerun the feature-toggled tests.
@@ -302,7 +303,6 @@ public class StationDetailsProducer {
         stationDetailsRequestEmitter.send(new StationDetailsRequestMessage(trainStopId, stationId));
     }
 }
-
 ```
 
 We will send a StationDetailsRequestMessage to the `station-details-requests` channel. Implement the StationDetailsRequestMessage record.
